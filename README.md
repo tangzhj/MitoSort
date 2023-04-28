@@ -17,8 +17,8 @@ Wait for setting.
 Wait for setting.
 ### Input and Output
 The output files are:
-1.specific_gemeline.txt
-2.The result_pvalue.txt 
+1. specific_gemeline.txt
+2. The result_pvalue.txt 
 result_pvalue.txt looks like:
 ```
 barcode	S_or_D	Demultiplex	P_value_1	P_value_2
@@ -33,9 +33,7 @@ CAACCAACAGTTACAC-4	S	Sample0	0.997044832437	0.00447870195437
 TACGGATGTGTTTCTT-1	S	Sample1	1.0				0.00186859425923
 GCAGCCATCAGCCGGT-1	S	Sample1	0.996103622578	0.00234697252993
 TGTACGAGTATCCTTT-1	S	Sample1	0.993533729465	0.00477584068789
-CCAGAATAGTACGACG-2	S	Sample2	0.994980170513	0.0
-ACGGATTGTGCCAAGA-1	S	Sample1	1.0				0.0
-AGCCCGACATGCACTA-2	S	Sample1	1.0				0.00202362928379
+
 ```
 
 
