@@ -21,7 +21,7 @@ The output files are:
 2. The result_pvalue.txt 
 result_pvalue.txt looks like:
 ```
-barcode 		S_or_D 		Demultiplex		P_value_1 	P_value_2
+barcode 	  S_or_D 	  Demultiplex	P_value_1 	P_value_2
 TGCGTAAAGTCGGGAT-1 	S	Sample2 	1.0 		0.0011289436655
 CCTAAAGCACCATTCC-1	S	Sample2 	0.99454523553	0.00941613048339
 AGCCAGCTCTGGCCAG-1	S	Sample3 	0.991007704872	0.00158759496457
