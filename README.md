@@ -19,6 +19,7 @@ Wait for setting.
 The output files are:
 1. specific_gemeline.txt
 2. The result_pvalue.txt 
+
 result_pvalue.txt looks like:
 ```
 barcode             S_or_D    Demultiplex     P_value_1              P_value_2
