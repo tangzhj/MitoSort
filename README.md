@@ -147,5 +147,10 @@ TGTACGAGTATCCTTT-1  S         Sample1         0.993533729465         0.004775840
 - Clean allele frequency matrix for doublets
 ![Image text](https://github.com/tangzhj/MitoSort/blob/main/example_output_figures/Doublet_heatmap.png)
 
-- https://github.com/tangzhj/MitoSort/blob/main/example_output_figures/Doublet_heatmap.png
+- Sihouette score for a range of k. Users can check if it match with known number of pooled samples. Besides, when the number of pooled samples is unkown, the parameter k can be set by hand according to sihouette score.
+![Image text](https://github.com/tangzhj/MitoSort/blob/main/example_output_figures/sihouette_score.png)
+
+
+
+
 
