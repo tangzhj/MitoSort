@@ -133,21 +133,27 @@ TGTACGAGTATCCTTT-1  S         Sample1         0.993533729465         0.004775840
 ```
 - We also generate a HTML file cotaining output figures
 - Raw allele frequency matrix
+
 ![Image text](https://github.com/tangzhj/MitoSort/blob/main/example_output_figures/raw_heatmap.png)
 
 - Clean allele frequency matrix for all cell barcodes (removing common variants)
+
 ![Image text](https://github.com/tangzhj/MitoSort/blob/main/example_output_figures/clean_heatmap.png)
 
 - Scatter plot of p1 and p2 for doubelt identification. Users can modify the cutoff of p1 and p2 based on the plot
+
 ![Image text](https://github.com/tangzhj/MitoSort/blob/main/example_output_figures/p_value.png)
 
 - Clean allele frequency matrix for singlets
+
 ![Image text](https://github.com/tangzhj/MitoSort/blob/main/example_output_figures/Singlet_heatmap.png)
 
 - Clean allele frequency matrix for doublets
+
 ![Image text](https://github.com/tangzhj/MitoSort/blob/main/example_output_figures/Doublet_heatmap.png)
 
 - Sihouette score for a range of k. Users can check if it match with known number of pooled samples. Besides, when the number of pooled samples is unkown, the parameter k can be set by hand according to sihouette score.
+
 ![Image text](https://github.com/tangzhj/MitoSort/blob/main/example_output_figures/sihouette_score.png)
 
 
