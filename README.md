@@ -1,7 +1,9 @@
 # MitoSort
 Preprint manuscript of this method available at https://doi.org/10.1101/2023.04.26.538392
+
+<img width="180" height="150" src="https://github.com/tangzhj/MitoSort/blob/main/MitoSort_logo.jpg">
+
 ## Overview 
-<img width="150" height="150" src="https://github.com/tangzhj/MitoSort/blob/main/MitoSort_logo.jpg">
 - MitoSort is an efficient computational method to demultiplex samples from different individuals and detect cross-genotype doublets using endogenous mtDNA germline variants. 
 - MitoSort is comprised of 6 steps with the first 2 using external tools and other using in-house script. Users can run each step one by one:
 	1. Realign MT sequences (using GATK, 01_MT_realign.py)
