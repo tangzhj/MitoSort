@@ -1,7 +1,88 @@
 #!/usr/bin/python
 
-import click
+import os
+import pysam as ps
+import pandas as pd
+import numpy as np
+import datetime
 
+
+def record_time():
+    today_date = datetime.date.today()
+    shown_date = today_date.strftime("%Y/%m/%d/")
+    now = datetime.datetime.now()
+    shown_time = now.strftime("%H:%M:%S")
+    value = shown_date+" "+shown_time
+    return value
+
+def fetch_region(bam_file, temp_dir,regions):
+    unsplit_file=bam_file
+    start = regions
+    end = regions + 2100
+    out_dir=temp_dir
+    outname = "_".join((str(start),str(end)))
+    filename = out_dir + "/" +outname+ ".bam"
+    samfile = ps.AlignmentFile( unsplit_file, "rb")
+    split_file = ps.AlignmentFile( filename, "wb", template=samfile)
+    for read in samfile.fetch('chrM',start,end):
+        split_file.write(read)
+    split_file.close()
+    os.system("samtools index "+filename)
+
+def fetch_region_wrapper(args):
+    return fetch_region(*args)
+
+def site_to_file(Position):##caculate site from which file
+    region = [item*2100 for item in range(8)]
+    diff = [abs(item*2100-Position) for item in range(8)]
+    min_region = min([abs(item*2100-Position) for item in range(8)])
+    seletect_region = region[diff.index(min_region)]
+    if Position >= seletect_region : 
+        return(seletect_region,seletect_region+2100)
+    if Position < seletect_region :
+        return(seletect_region-2100,seletect_region)
+
+def fetch_site(temp_dir,barcodes,tag,site):
+    Position = int(site.split("-")[0])##site position
+    start_p,end_p = site_to_file(Position)
+    outname = "_".join((str(start_p),str(end_p)))
+    filename = temp_dir + "/" +outname+ ".bam"
+    in_sam = ps.AlignmentFile(filename, 'rb')
+    Ref = site.split("-")[1]
+    VarAllele = site.split("-")[2]
+    ref_base_calls_mtx = pd.DataFrame(0, index=[site], columns=barcodes, dtype=np.int16)
+    alt_base_calls_mtx = pd.DataFrame(0, index=[site], columns=barcodes, dtype=np.int16)
+    count = 0
+    Position = Position-1
+    test_dic1 = {}
+    test_dic2= {}
+    for i in barcodes:
+        test_dic1[i] = 0
+        test_dic2[i] = 0
+    for read in in_sam.fetch('chrM', Position, Position+1):
+        if read.has_tag(tag):
+            if (Position) in read.get_reference_positions():
+                base_index =  read.get_reference_positions().index(Position)
+            # if the read aligned positions cover the SNV position
+                barcode = read.get_tag(tag)
+                if barcode in barcodes:
+                
+                    count += 1
+                    base = read.query_sequence[ read.get_aligned_pairs(True)[base_index][0]]
+                    if base == Ref:
+                        test_dic1[barcode] += 1
+                    elif base == VarAllele:
+                        test_dic2[barcode] += 1
+    ref_base_calls_mtx  = pd.DataFrame([test_dic1],index=[site])
+    alt_base_calls_mtx  = pd.DataFrame([test_dic2],index=[site])
+    in_sam.close()
+    return(ref_base_calls_mtx,alt_base_calls_mtx)
+
+def fetch_site_wrapper(args):
+    return fetch_site(*args)
+
+
+import click
 @click.group()
 def cli():
     pass
@@ -45,13 +126,6 @@ def MT_realign(bam_file,genome_fasta,gatk_path,output_dir,data_type):
     import datetime
     print("imports done")
 
-    def record_time():
-        today_date = datetime.date.today()
-        shown_date = today_date.strftime("%Y/%m/%d/")
-        now = datetime.datetime.now()
-        shown_time = now.strftime("%H:%M:%S")
-        value = shown_date+" "+shown_time
-        return value
 
     # make parent directory
     MitoSort_output_dir = os.path.join(output_dir, "MitoSort")
@@ -142,19 +216,11 @@ def Generate_SNP_matrix(bam_file,genome_fasta,chrm_length,varscan_path,cell_barc
     from multiprocessing import Pool
     from functools import partial
     from collections import defaultdict
-    from multiprocessing import Manager
     import sys
     import datetime
+    import functools
+    import dill
     print("imports done")
-
-
-    def record_time():
-        today_date = datetime.date.today()
-        shown_date = today_date.strftime("%Y/%m/%d/")
-        now = datetime.datetime.now()
-        shown_time = now.strftime("%H:%M:%S")
-        value = shown_date+" "+shown_time
-        return value
 
     BAM_output_dir = os.path.join(output_dir, "MitoSort", "BAM")
     os.chdir(BAM_output_dir)
@@ -179,27 +245,11 @@ def Generate_SNP_matrix(bam_file,genome_fasta,chrm_length,varscan_path,cell_barc
     if not os.path.exists(temp_dir):
         os.mkdir(temp_dir)
 
-    def fetch_region(regions):
-        unsplit_file=bam_file
-        start = regions
-        end = regions + 2100
-        out_dir=temp_dir
-        outname = "_".join((str(start),str(end)))
-        filename = out_dir + "/" +outname+ ".bam"
-        samfile = ps.AlignmentFile( unsplit_file, "rb")
-        split_file = ps.AlignmentFile( filename, "wb", template=samfile)
-        for read in samfile.fetch('chrM',start,end):
-            split_file.write(read)
-        split_file.close()
-        os.system("samtools index "+filename)
-
-
     # divide BAM file based on MT positions for faster computation
     print("["+record_time()+"] Generate temporary BAM files for faster computation")
-    manager = Manager()
-    region_lit = manager.list([item*2100 for item in range(8)])
+    region_lit = [(bam_file, temp_dir, item*2100) for item in range(8)]
     pool = Pool(8)
-    pool.map(fetch_region,region_lit)
+    results = pool.imap(fetch_region_wrapper, region_lit)
     pool.close()
     pool.join()
 
@@ -261,62 +311,17 @@ def Generate_SNP_matrix(bam_file,genome_fasta,chrm_length,varscan_path,cell_barc
         f.close()
     else:
         output_file=barcode_dir + "/" + "barcode_result.txt"
-        subprocess.call(["cp", cell_barcode_file, output_file],check=True)
+        cp_cmd = ["cp", cell_barcode_file, output_file]
+        subprocess.call(" ".join(cp_cmd), shell=True)
 
     # Make SNP directory 
     SNP_matrix_dir=os.path.join(output_dir,"MitoSort/SNP_matrix")
     if not os.path.exists(SNP_matrix_dir):
         os.mkdir(SNP_matrix_dir)
 
-    def site_to_file(Position):##caculate site from which file
-        region = [item*2100 for item in range(8)]
-        diff = [abs(item*2100-Position) for item in range(8)]
-        min_region = min([abs(item*2100-Position) for item in range(8)])
-        seletect_region = region[diff.index(min_region)]
-        if Position >= seletect_region : 
-            return(seletect_region,seletect_region+2100)
-        if Position < seletect_region :
-            return(seletect_region-2100,seletect_region)
-
-
-    def fetch_site(site):
-        Position = int(site.split("-")[0])##site position
-        start_p,end_p = site_to_file(Position)
-        outname = "_".join((str(start_p),str(end_p)))
-        filename = temp_dir + "/" +outname+ ".bam"
-        in_sam = ps.AlignmentFile(filename, 'rb')
-        Ref = site.split("-")[1]
-        VarAllele = site.split("-")[2]
-        ref_base_calls_mtx = pd.DataFrame(0, index=[site], columns=barcodes, dtype=np.int16)
-        alt_base_calls_mtx = pd.DataFrame(0, index=[site], columns=barcodes, dtype=np.int16)
-        count = 0
-        Position = Position-1
-        test_dic1 = {}
-        test_dic2= {}
-        for i in barcodes:
-            test_dic1[i] = 0
-            test_dic2[i] = 0
-        for read in in_sam.fetch('chrM', Position, Position+1):
-            if read.has_tag(tag):
-                if (Position) in read.get_reference_positions():
-                    base_index =  read.get_reference_positions().index(Position)
-                # if the read aligned positions cover the SNV position
-                    barcode = read.get_tag(tag)
-                    if barcode in barcodes:
-                    
-                        count += 1
-                        base = read.query_sequence[ read.get_aligned_pairs(True)[base_index][0]]
-                        if base == Ref:
-                            test_dic1[barcode] += 1
-                        elif base == VarAllele:
-                            test_dic2[barcode] += 1
-        ref_base_calls_mtx  = pd.DataFrame([test_dic1],index=[site])
-        alt_base_calls_mtx  = pd.DataFrame([test_dic2],index=[site])
-        in_sam.close()
-        return(ref_base_calls_mtx,alt_base_calls_mtx)
-
     # generate SNP matrix
     print("["+record_time()+"] Generating SNP matrices")
+    start = datetime.datetime.now() 
     bam_dir=os.path.join(output_dir,"MitoSort/temp/")
     snv_file=os.path.join(output_dir,"MitoSort/BAM/possorted_chrM_realign.snv")
     barcode_file=os.path.join(output_dir,"MitoSort/barcode/barcode_result.txt")
@@ -324,11 +329,6 @@ def Generate_SNP_matrix(bam_file,genome_fasta,chrm_length,varscan_path,cell_barc
     row_lit = []
     blacklit = [302,309,312,313,316,514,515,523,524,3106,3107,3109,3110,16181]
 
-    for position, row in filtered_vcf.iterrows():
-        site_infor = str(row['Position']),row['Ref'],row['VarAllele']
-        fre = float(row['VarFreq'].split("%")[0])
-        if fre > 1.0 and fre <99.0 and row['Position'] not in blacklit:
-            row_lit.append("-".join(site_infor))
 
     f = pd.read_csv(barcode_file,sep="\t") ##cellbarcodes
     barcodes = {}
@@ -342,14 +342,20 @@ def Generate_SNP_matrix(bam_file,genome_fasta,chrm_length,varscan_path,cell_barc
             barcodes[i.strip()] = 0
     barcodes_lit = list(barcodes)
 
-    tag=cell_tag # default is CB
+    for position, row in filtered_vcf.iterrows():
+        site_infor = str(row['Position']),row['Ref'],row['VarAllele']
+        fre = float(row['VarFreq'].split("%")[0])
+        if fre > 1.0 and fre <99.0 and row['Position'] not in blacklit:
+            row_lit.append((temp_dir,barcodes,cell_tag,"-".join(site_infor)))
+
+    #tag=cell_tag # default is CB
     bam = bam_dir ##8 bam dir
     result_frequency = os.path.join(SNP_matrix_dir,"frequency.csv")
     result_alt = os.path.join(SNP_matrix_dir,"alt.csv")
     result_ref = os.path.join(SNP_matrix_dir,"ref.csv")
 
     pool = Pool(30)
-    result_list = pool.map(fetch_site,row_lit)
+    result_list = pool.map(fetch_site_wrapper,row_lit)
     pool.close()
     pool.join()
     ref_matrix = pd.DataFrame(columns=barcodes, dtype=np.int16)
@@ -415,14 +421,6 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
     import datetime
     sys.setrecursionlimit(100000)
     print("imports done")
-
-    def record_time():
-        today_date = datetime.date.today()
-        shown_date = today_date.strftime("%Y/%m/%d/")
-        now = datetime.datetime.now()
-        shown_time = now.strftime("%H:%M:%S")
-        value = shown_date+" "+shown_time
-        return value
 
     demultiplex_dir=os.path.join(output_dir,"MitoSort/Demultiplex_output")
     if not os.path.exists(demultiplex_dir):
@@ -496,7 +494,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
             #print(i,a[i])
             if a[i] > confident_germline_ratio:
                 seletec_germ.append(i)
-    
+        
         #generate final matrix.
 
         To_GMM_barcode = barcode_lit
@@ -524,7 +522,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         fig,ax = plt.subplots(figsize = (8,6))
         ax.set_facecolor("white")
         ax.grid(ls="")
-        # Convert bottom-left and top-right to display coordinates
+         # Convert bottom-left and top-right to display coordinates
         x_0, y_0 = ax.transAxes.transform((0, 0))
         x_1, y_1 = ax.transAxes.transform((1, 1))
 
@@ -543,12 +541,12 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         ax.patches.append(rect)
         sil_max_index = sil.index(max(sil))
         if sil[sil_max_index] - sil[sil_max_index-1] < 0.05:
-        
+            
             #print("sil:",sil[sil_max_index],sil[sil_max_index-1])
             sil_max_index = sil_max_index-1
-        
+            
         plt.axvline(x = sil_max_index+2, ymin = 0.05, ymax = 1.0, color = 'r',ls='--',label = "Best k="+str(sil_max_index+2))
-    
+        
         plt.legend(loc = "best",fontsize=15)
         plt.plot(range(2,kmax+1,1), sil, '-p', color='gold')
         plt.xticks(range(1,kmax+1,1))
@@ -556,7 +554,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         plt.ylabel('silhouette_score')
         plt.savefig("{}/sihouette_score.pdf".format(output_path),dpi = 400,bbox_inches = 'tight') # save figure 
         plt.show()
-    
+        
         ab = sns.clustermap(To_GMM_matrix, metric="euclidean")
         ab.ax_heatmap.set_xlabel("Site")
         ab.savefig("{}/raw_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') #save figure
@@ -623,7 +621,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
             createVar['single_cell_'+ str(i)] = []
             myVar3.append('single_cell_'+ str(i)) 
             locals()['single_cell_'+ str(i)] = set(locals()["cell_"+str(i)+"_site"]).difference(set(double_lit))
-        #print( locals()['cell_'+ str(i)][1:5],locals()['single_cell_'+ str(i)])
+            #print( locals()['cell_'+ str(i)][1:5],locals()['single_cell_'+ str(i)])
 
 
         myVar4 = [] # martix for each sample
@@ -634,7 +632,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         for j in range(sample_num):
             locals()['cell_'+ str(j)+"_clean_matrix"] = clean_matrix.loc[:,locals()['single_cell_'+ str(j)]]
 
-    ##caculate p-value in first fitted cluster and second fitted
+        ##caculate p-value in first fitted cluster and second fitted
         print("caculate p-value!")
         tag = 0
         var_lit = myVar3
@@ -681,7 +679,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
                             #print(k_alt,k_ref,c_alt,c_ref)
                             post_mean = alpha_post/(alpha_post + beta_post)
                             post_mode = (alpha_post-1)/(alpha_post+beta_post-2)
-                            #print(post_mean)
+                                #print(post_mean)
                             #ppsum = ppsum * abs(post_mean)
                             cell_pvalue_dic[a_cell].append(post_mean)
                             cell_pvalue_dic1[a_cell].append(post_mode)
@@ -709,17 +707,17 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
                                 #print(a_cell,ll)
                                 post_mean = 0
                             if (alpha_post+beta_post-2) <0:
-                               post_mode = 0
+                                post_mode = 0
                             else:
                             '''
                             post_mean = alpha_post/(alpha_post + beta_post)
                             post_mode = (alpha_post-1)/(alpha_post+beta_post-2)
-                            
+                                
                             if post_mode>1:
                                 post_mode = 1
                             if post_mode<0:
                                 post_mode = 0
-                            
+                                
                                 #print(post_mean)
                             #ppsum = ppsum * abs(post_mean)
                             cell_pvalue_dic[a_cell].append(post_mean)
@@ -727,14 +725,14 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
             #return(cell_pvalue_dic)
         #test_dic = caculate_p_each_k(myVar1,myVar2,matrix_alt,matrix_ref)    
 
-    
+        
         lit = []
         raw_lit1 = []
         raw_lit2 = []
         bar_lit = [] 
-    
+        
         wrong_cell = []
-    
+        
         lit1 = []
         lit2 = []
         lit_doublet1 = []
@@ -754,7 +752,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
             #print(k)
             raw_lit1.append(k[0])
             raw_lit2.append(k[1])
-        
+            
             bar_lit.append(i)
             psort_dic[i] = k
             '''
@@ -785,7 +783,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         data_P = list(zip(raw_lit1, raw_lit2))
         df3 = pd.DataFrame(np.array([raw_lit1,raw_lit2]).T,columns=['a', 'b'],index=bar_lit)
         #print(data_P)
-    
+        
         known_class = []
         new_lit1 = []
         new_lit2 = []
@@ -822,7 +820,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         all_class = list(known_class)+list(prediction)
         all_bar = list(known_bar)+list(prediction_bar)
 
-    
+        
         # Generate scatter plot for training data
 
         #colors = list(map(lambda x: '#3b4cc0' if x == "S" else '#b40426', list(known_class)+list(prediction)))
@@ -853,7 +851,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         plt.savefig("{}/p_value.pdf".format(output_path),dpi = 400,bbox_inches = 'tight') 
         plt.show()
         all_p = (label_data_P+nolabel_data_P)
-    
+        
         ## find maximum cutoff for p1
         singlet_blue1= []
         doublet_red1 = []
@@ -865,8 +863,8 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
                 clean_barcode.append(all_bar[i])
                 c += 1
                 #if clean_matrix.index[i] in true_doublet:
-                #print(clean_matrix.index[i],litss_lit[i])
-    
+                    #print(clean_matrix.index[i],litss_lit[i])
+        
         if len(clean_barcode) > 10:
             aa = sns.clustermap(clean_matrix.loc[clean_barcode,:], metric="euclidean")
             aa.ax_heatmap.set_xlabel("Site")
@@ -895,7 +893,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         kmeans.fit(X)
         labels = kmeans.labels_
         kmeans.labels_
-    
+        
         final_labels = labels
 
         ## write output 
@@ -930,7 +928,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         specific_germline = {}
         for k in range(sample_num):
             specific_germline["Sample"+str(k)] = locals()["end_cell_"+str(k)+"_site"]
-        
+            
         return(specific_germline,all_p,all_class,all_bar,clean_matrix,useful_site,var_lit,wrong_cell,clean_barcode,matrix_fre,final_dict,matrix_final)
 
     def generate_html(output_path):
@@ -1000,7 +998,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
                 <div class="image-title">{{ Discription_png[i+3] }}</div>
                 <img src="{{ png_files[i+3] }}" width="100%">
             </div>
-        
+            
 
 
         {% endfor %}
@@ -1058,7 +1056,6 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         with open(output_dir+'/my_figures_and_data.html', 'w') as f:
             f.write(html_content)
         print("Generate html!")
-
 
     print("["+record_time()+"] Start demultiplexing")
     (matrix_alt,matrix_ref,matrix_fre,matrix_depth,fragment_data) = read_file(path1,path2,path3,path4)
