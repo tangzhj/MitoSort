@@ -36,7 +36,7 @@ git clone https://github.com/tangzhj/MitoSort.git
 conda env create -f /path/to/MitoSort/MitoSort_env.yaml
 conda activate MitoSort
 ```
-In addition to required python packages. MitoSort also requires [GATK](https://github.com/broadgsa/gatk/releases) for MT realignment and [VarScan2](https://github.com/Jeltje/varscan2/releases) for variant calling. Users should install them and specify the path of tool when running MitoSort. 
+In addition to required python packages. MitoSort also requires [GATK](https://github.com/broadgsa/gatk/releases) for MT realignment and [VarScan2](https://github.com/Jeltje/varscan2/releases) for variant calling. Users should install them and specify the path of tool when running MitoSort. We also upload the versions of tools we have tested in this repository.
 
 
 ## Usage 
