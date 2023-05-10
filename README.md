@@ -161,7 +161,7 @@ TGTACGAGTATCCTTT-1  S         Sample1         0.993533729465         0.004775840
 
 
 ## Testing data set
-Please download [testing data set](https://drive.google.com/drive/folders/1O8LsKSwOvhjnIEangECawl3pRXL10aYO?usp=sharing), which contain downsampled scATAC-seq data from DOGMA-seq data (GSE200417) which multipled two donors :
+Please download [testing data set](https://drive.google.com/drive/folders/1O8LsKSwOvhjnIEangECawl3pRXL10aYO?usp=sharing), which contain downsampled scATAC-seq data from DOGMA-seq data (GSE200417) which multiplexed two donors :
   - test_DOGMAseq_atac_possorted_chrM.bam
   - test_DOGMAseq_atac_possorted_chrM.bam.bai
   - test_DOGMAseq_barcode.txt
@@ -183,6 +183,3 @@ python /path/to/MitoSort/MitoSort_pipeline.py generate-snp-matrix -b /path/to/ou
 # you can tune the cutoff by checking the results of demultiplexing
 python /path/to/MitoSort/MitoSort_pipeline.py demultiplex -o /path/to/output_dir -k 2 --p1_cutoff 0.8 --p2_cutoff 0.2
 ```
-
-
-
