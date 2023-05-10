@@ -160,6 +160,29 @@ TGTACGAGTATCCTTT-1  S         Sample1         0.993533729465         0.004775840
 ![Image text](https://github.com/tangzhj/MitoSort/blob/main/example_output_figures/sihouette_score.png)
 
 
+## Testing data set
+Please download [testing data set](https://drive.google.com/drive/folders/1O8LsKSwOvhjnIEangECawl3pRXL10aYO?usp=sharing), which contain downsampled scATAC-seq data from DOGMA-seq data (GSE200417) which multipled two donors :
+  - test_DOGMAseq_atac_possorted_chrM.bam
+  - test_DOGMAseq_atac_possorted_chrM.bam.bai
+  - test_DOGMAseq_barcode.txt
+```
+## clone MitoSort repository 
+git clone https://github.com/tangzhj/MitoSort.git
+
+## create a conda environment and install all the required python packages
+conda env create -f /path/to/MitoSort/MitoSort_env.yaml
+conda activate MitoSort
+
+## realign MT reads for test data, the reference genome is hg38
+python /path/to/MitoSort/MitoSort_pipeline.py mt-realign -b /path/to/data/test_DOGMAseq_atac_possorted_chrM.bam -f /path/to/hg38.fasta --gatk_path /path/to/MitoSort/GenomeAnalysisTK_3.5-0.jar -o /path/to/output_dir
+
+## generate SNP matrices
+python /path/to/MitoSort/MitoSort_pipeline.py generate-snp-matrix -b /path/to/output_dir/MitoSort/BAM/possorted_chrM_realign.bam -f /path/to/hg38.fasta -c /path/to/data/test_DOGMAseq_barcode.txt -m /path/to/MitoSort/data/hg38_chrM.bed --varscan_path /path/to/MitoSort/VarScan.v2.3.7.jar -o /path/to/output_dir
+
+## demultiplex samples
+# you can tune the cutoff by checking the results of demultiplexing
+python /path/to/MitoSort/MitoSort_pipeline.py demultiplex -o /path/to/output_dir -k 2 --p1_cutoff 0.8 --p2_cutoff 0.2
+```
 
 
 
