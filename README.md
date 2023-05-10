@@ -6,12 +6,12 @@ Preprint manuscript of this method available at https://doi.org/10.1101/2023.04.
 ## Overview 
 MitoSort is an efficient computational method to demultiplex samples from different individuals and detect cross-genotype doublets using endogenous mtDNA germline variants. 
 It is comprised of 6 steps with the first 2 using external tools and other using in-house script. Users can run each step one by one:
-  - Realign MT sequences (using GATK, 01_MT_realign.py)
-	- Find SNP (using Varscan2, 02_find_SNPs.py)
-	- Divide bam (03_divide_BAM.py)
-	- Retain cell barcode (04_retain_cell_barcodes.py)
-	- Generate SNP matrix (05_generate_SNP_matrix.py)
-	- Demultiplex (06_demultiplex.py)
+- Realign MT sequences (using GATK, 01_MT_realign.py)
+- Find SNP (using Varscan2, 02_find_SNPs.py)
+- Divide bam (03_divide_BAM.py)
+- Retain cell barcode (04_retain_cell_barcodes.py)
+- Generate SNP matrix (05_generate_SNP_matrix.py)
+- Demultiplex (06_demultiplex.py)
 For the convenience of users, we also encapsulate MitoSort pipeline into three subcommands including mt-realign, generate-snp-matrix and demultiplex. Users can input the name of subcommand for further help information : 
 ```shell
 Usage: MitoSort_pipeline.py [OPTIONS] COMMAND [ARGS]...
