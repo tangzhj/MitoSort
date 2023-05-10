@@ -4,15 +4,15 @@ Preprint manuscript of this method available at https://doi.org/10.1101/2023.04.
 <img width="180" height="150" src="https://github.com/tangzhj/MitoSort/blob/main/MitoSort_logo.jpg">
 
 ## Overview 
-- MitoSort is an efficient computational method to demultiplex samples from different individuals and detect cross-genotype doublets using endogenous mtDNA germline variants. 
-- MitoSort is comprised of 6 steps with the first 2 using external tools and other using in-house script. Users can run each step one by one:
-	1. Realign MT sequences (using GATK, 01_MT_realign.py)
-	2. Find SNP (using Varscan2, 02_find_SNPs.py)
-	3. Divide bam (03_divide_BAM.py)
-	4. Retain cell barcode (04_retain_cell_barcodes.py)
-	5. Generate SNP matrix(05_generate_SNP_matrix.py)
-	6. Demultiplex(06_demultiplex.py)
-- For the convenience of users, we also encapsulate MitoSort pipeline into three subcommands including mt-realign, generate-snp-matrix and demultiplex. Users can input the name of subcommand for further help information : 
+MitoSort is an efficient computational method to demultiplex samples from different individuals and detect cross-genotype doublets using endogenous mtDNA germline variants. 
+It is comprised of 6 steps with the first 2 using external tools and other using in-house script. Users can run each step one by one:
+  - Realign MT sequences (using GATK, 01_MT_realign.py)
+	- Find SNP (using Varscan2, 02_find_SNPs.py)
+	- Divide bam (03_divide_BAM.py)
+	- Retain cell barcode (04_retain_cell_barcodes.py)
+	- Generate SNP matrix (05_generate_SNP_matrix.py)
+	- Demultiplex (06_demultiplex.py)
+For the convenience of users, we also encapsulate MitoSort pipeline into three subcommands including mt-realign, generate-snp-matrix and demultiplex. Users can input the name of subcommand for further help information : 
 ```shell
 Usage: MitoSort_pipeline.py [OPTIONS] COMMAND [ARGS]...
 
@@ -26,7 +26,7 @@ Commands:
 ```
 
 ## Installation
-- Users can create a conda environment to install all the required python packages of MitoSort
+Users can create a conda environment to install all the required python packages of MitoSort
 ```
 # clone MitoSort repository 
 git clone https://github.com/tangzhj/MitoSort.git
@@ -35,12 +35,12 @@ git clone https://github.com/tangzhj/MitoSort.git
 conda env create -f /path/to/MitoSort/MitoSort_env.yaml
 conda activate MitoSort
 ```
-- In addition to required python packages. MitoSort also requires [GATK](https://github.com/broadgsa/gatk/releases) for MT realignment and [VarScan2](https://github.com/Jeltje/varscan2/releases) for variant calling. Users should install them and specify the path of tool when running MitoSort. 
+In addition to required python packages. MitoSort also requires [GATK](https://github.com/broadgsa/gatk/releases) for MT realignment and [VarScan2](https://github.com/Jeltje/varscan2/releases) for variant calling. Users should install them and specify the path of tool when running MitoSort. 
 
 
 ## Usage 
 ### Realign mitochondrial reads using GATK
-- First, mitochondrial reads are realigned by GATK by calling `mt-realign` command. The following are options for `mt-realign` command. It takes a BAM file as input and output a BAM file containing realigned MT reads (possorted_chrM_realign.bam).
+First, mitochondrial reads are realigned by GATK by calling `mt-realign` command. The following are options for `mt-realign` command. It takes a BAM file as input and output a BAM file containing realigned MT reads (possorted_chrM_realign.bam).
 ```
 Usage: MitoSort_pipeline.py mt-realign [OPTIONS]
 
@@ -56,13 +56,13 @@ Options:
 
   -h, --help               Show this message and exit.
 ```
-- A typical `mt-realign` command looks like
+A typical `mt-realign` command looks like
 ```
 python MitoSort_pipeline.py mt-realign -b /path/to/possorted_bam.bam -f /path/to/reference.fasta --gatk_path /path/to/GenomeAnalysisTK_3.5-0.jar -o /path/to/output_dir
 ```
 
 ### Generate SNP matrices
-- Given a list of barcodes, SNP matrices containg alternative counts, reference counts and allele frequency are generated for these barcodes by calling `generate-snp-matrix` command. The following are options for `generate-snp-matrix` command. Note that the `output_dir` option should be the same as that of `mt-realign` command.
+Given a list of barcodes, SNP matrices containg alternative counts, reference counts and allele frequency are generated for these barcodes by calling `generate-snp-matrix` command. The following are options for `generate-snp-matrix` command. Note that the `output_dir` option should be the same as that of `mt-realign` command.
 ```
 Usage: MitoSort_pipeline.py generate-snp-matrix [OPTIONS]
 
@@ -88,13 +88,13 @@ Options:
 
   -h, --help               Show this message and exit.
 ```
-- A typical `generate-snp-matrix` command looks like
+A typical `generate-snp-matrix` command looks like
 ```
 python MitoSort_pipeline.py generate-snp-matrix -b /path/to/possorted_chrM_realign.bam -f /path/to/reference.fasta -c /path/to/singlecell.csv -m /path/to/MitoSort/data/hg38_chrM.bed --varscan_path /path/to/VarScan.v2.3.7.jar -o /path/to/output_dir
 ```
 
 ### Doublet identification and sample demultiplexing
-- The core of MitoSort is to identify cross-genotype doublets and demultiplex samples from different individuals. It can be achieved by calling `demultiplex` command. Users can tune the parameters and run it multiple times to achieve best performance on specific datasets. The following are options for `demultiplex` command. Note that the `output_dir` option should be the same as that of `mt-realign` command.
+The core of MitoSort is to identify cross-genotype doublets and demultiplex samples from different individuals. It can be achieved by calling `demultiplex` command. Users can tune the parameters and run it multiple times to achieve best performance on specific datasets. The following are options for `demultiplex` command. Note that the `output_dir` option should be the same as that of `mt-realign` command.
 ```
 Usage: MitoSort_pipeline.py demultiplex [OPTIONS]
 
@@ -111,14 +111,14 @@ Options:
 
   -h, --help             Show this message and exit.
 ```
-- A typical `demultiplex` command looks like
+A typical `demultiplex` command looks like
 ```
 python MitoSort_pipeline.py demultiplex -o /path/to/output_dir -k number_of_pooled_individuals
 ```
-- The important output files are 
-	1. specific_gemeline.txt (specific mtDNA germline variants for each individual)
-	2. The result_pvalue.txt  
-	- The following is example of result_pvalue.txt, which includes the cell barcode, singlet/doublet status, assigned sample, p1 and p2:
+The important output files are 
+  - `specific_gemeline.txt` (specific mtDNA germline variants for each individual)
+  - `result_pvalue.txt`  
+The following is example of `result_pvalue.txt`, which includes the cell barcode, singlet/doublet status, assigned sample, p1 and p2:
 ```
 barcode             S_or_D    Demultiplex     P_value_1              P_value_2
 TGCGTAAAGTCGGGAT-1  S         Sample2         1.0                    0.0011289436655
@@ -134,7 +134,7 @@ GCAGCCATCAGCCGGT-1  S         Sample1         0.996103622578         0.002346972
 TGTACGAGTATCCTTT-1  S         Sample1         0.993533729465         0.00477584068789
 
 ```
-- We also generate a HTML file cotaining output figures
+We also generate a HTML file cotaining output figures
 - Raw allele frequency matrix
 
 ![Image text](https://github.com/tangzhj/MitoSort/blob/main/example_output_figures/raw_heatmap.png)
