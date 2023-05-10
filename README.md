@@ -12,6 +12,7 @@ It is comprised of 6 steps with the first 2 using external tools and other using
 - Retain cell barcode (04_retain_cell_barcodes.py)
 - Generate SNP matrix (05_generate_SNP_matrix.py)
 - Demultiplex (06_demultiplex.py)
+
 For the convenience of users, we also encapsulate MitoSort pipeline into three subcommands including mt-realign, generate-snp-matrix and demultiplex. Users can input the name of subcommand for further help information : 
 ```shell
 Usage: MitoSort_pipeline.py [OPTIONS] COMMAND [ARGS]...
