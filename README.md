@@ -58,7 +58,7 @@ Options:
 ```
 - A typical `mt-realign` command looks like
 ```
-python MitoSort_pipeline.py -b /path/to/possorted_bam.bam -f /path/to/reference.fasta --gatk_path /path/to/GenomeAnalysisTK_3.5-0.jar -o /path/to/output_dir
+python MitoSort_pipeline.py mt-realign -b /path/to/possorted_bam.bam -f /path/to/reference.fasta --gatk_path /path/to/GenomeAnalysisTK_3.5-0.jar -o /path/to/output_dir
 ```
 
 ### Generate SNP matrices
