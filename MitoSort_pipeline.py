@@ -124,9 +124,10 @@ def MT_realign(bam_file,genome_fasta,gatk_path,output_dir,data_type):
     import subprocess 
     import os
     import datetime
+    import time
     print("imports done")
 
-
+    start = time.time()
     # make parent directory
     MitoSort_output_dir = os.path.join(output_dir, "MitoSort")
     if not os.path.exists(MitoSort_output_dir):
@@ -167,6 +168,10 @@ def MT_realign(bam_file,genome_fasta,gatk_path,output_dir,data_type):
         # Realign reads using IndelRealigner
         print("["+record_time()+"] Realign reads using GATK IndelRealigner")
         subprocess.call(["java", "-Xmx100g", "-jar", gatk_path, "-R", genome_fasta, "-T", "IndelRealigner", "-filterNoBases", "-maxReads","10000000","-I","possorted_chrM.bam","-targetIntervals","chrM_realignertargetcreator.intervals","-o","possorted_chrM_realign.bam"])
+
+    end = time.time()
+    elapsed = end-start
+    print("Total time:",str(time.strftime("%Hh%Mm%Ss", time.gmtime(elapsed))))
 
 
 @cli.command(context_settings={'help_option_names': ['-h', '--help']})
@@ -220,8 +225,10 @@ def Generate_SNP_matrix(bam_file,genome_fasta,chrm_length,varscan_path,cell_barc
     import datetime
     import functools
     import dill
+    import time 
     print("imports done")
 
+    start = time.time()
     BAM_output_dir = os.path.join(output_dir, "MitoSort", "BAM")
     os.chdir(BAM_output_dir)
 
@@ -321,7 +328,6 @@ def Generate_SNP_matrix(bam_file,genome_fasta,chrm_length,varscan_path,cell_barc
 
     # generate SNP matrix
     print("["+record_time()+"] Generating SNP matrices")
-    start = datetime.datetime.now() 
     bam_dir=os.path.join(output_dir,"MitoSort/temp/")
     snv_file=os.path.join(output_dir,"MitoSort/BAM/possorted_chrM_realign.snv")
     barcode_file=os.path.join(output_dir,"MitoSort/barcode/barcode_result.txt")
@@ -368,8 +374,9 @@ def Generate_SNP_matrix(bam_file,genome_fasta,chrm_length,varscan_path,cell_barc
     frequency_matrix.to_csv(result_frequency)
     ref_matrix.to_csv(result_ref)
     alt_matrix.to_csv(result_alt)
-    end = datetime.datetime.now() 
-    print("Total time:",str(end-start))
+    end = time.time()
+    elapsed = end-start
+    print("Total time:",str(time.strftime("%Hh%Mm%Ss", time.gmtime(elapsed))))
 
 
 @cli.command(context_settings={'help_option_names': ['-h', '--help']})
@@ -419,9 +426,11 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
     from jinja2 import Template
     import argparse
     import datetime
+    import time
     sys.setrecursionlimit(100000)
     print("imports done")
-
+    
+    start = time.time()
     demultiplex_dir=os.path.join(output_dir,"MitoSort/Demultiplex_output")
     if not os.path.exists(demultiplex_dir):
         os.mkdir(demultiplex_dir)
@@ -1085,6 +1094,9 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
 
     generate_html(demultiplex_dir)
     print("["+record_time()+"] Demultiplexing done!")
+    end = time.time()
+    elapsed = end-start
+    print("Total time:",str(time.strftime("%Hh%Mm%Ss", time.gmtime(elapsed))))
 
 
 if __name__ == '__main__':
