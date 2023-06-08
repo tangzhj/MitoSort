@@ -121,18 +121,19 @@ The important output files are
   - `result_pvalue.txt`  
 The following is example of `result_pvalue.txt`, which includes the cell barcode, singlet/doublet status, assigned sample, p1 and p2:
 ```
-barcode             S_or_D    Demultiplex     P_value_1              P_value_2
-TGCGTAAAGTCGGGAT-1  S         Sample2         1.0                    0.0011289436655
-CCTAAAGCACCATTCC-1  S         Sample2         0.99454523553          0.00941613048339
-AGCCAGCTCTGGCCAG-1  S         Sample3         0.991007704872         0.00158759496457
-TTCAACTTCGTTGTTT-2  S         Sample0         0.998110251201         0.0017108811068
-CATTCATAGTACGCGA-4  S         Sample0         0.998505613353         0.00139568480579
-TGCACCTGTATTCGCA-1  D         Doublet         0.722414353581         0.253402082068
-GCGATCGAGTACAGAT-1  S         Sample0         0.997696759297         0.00915089076023
-CAACCAACAGTTACAC-4  S         Sample0         0.997044832437         0.00447870195437
-TACGGATGTGTTTCTT-1  S         Sample1         1.0                    0.00186859425923
-GCAGCCATCAGCCGGT-1  S         Sample1         0.996103622578         0.00234697252993
-TGTACGAGTATCCTTT-1  S         Sample1         0.993533729465         0.00477584068789
+Barcode         Demultiplex P_value_1   P_value_2     Sample0_Pr      Sample1_Pr      Sample2_Pr      Sample3_Pr
+LibATCACCACTCCCAATAG-1 Sample2   1.0       0.00205835430593  0.00205835430593  0.0         1.0         0.000257875653677
+LibACGAGTTAGTGATGCTT-1 Sample0   0.998651193644  0.00733731472454  0.998651193644    0.0         0.0         0.00733731472454
+LibBCAGCTGGGTTGCCGCA-1 Sample1   1.0       0         0.0         1.0         0.0         0.0
+LibCTAAGTGCGTATTCGCA-1 Doublet   0.590786198879  0.329170270029    0.000912548265621 0.329170270029    0.00440488270379  0.590786198879
+LibBACCCAAACATGGCCTG-1 Sample0   1.0       0.00413587262409  1.0         0.000530469189207 0.0         0.00413587262409
+LibBTCAAGACCACCGATCG-1 Sample3   0.996511939525  0.00733825148285  0.00733825148285  0.00676639717093  0.0         0.996511939525
+LibAAGACAAAAGTAGACCG-1 Sample1   0.992696439997  0.00449414934583  0.0         0.992696439997    0.00449414934583  0.0
+LibCTAGGAGGGTGTCCTTC-1 Sample3   0.994666446983  0         0.0         0.0         0.0         0.994666446983
+LibBAGATTCGGTGATCAGG-1 Doublet   0.636443320426  0.345761737915    0.636443320426    0.345761737915    0.0         0.00109596204691
+LibBGAAGAGCGTGCTGGCT-1 Sample3   0.993330672446  0.0         0.0         0.0         0.0         0.993330672446
+LibACCCTCTCAGGGCTCTC-1 Sample2   0.995806847294  0.0         0.0         0.0         0.995806847294    0.0
+LibDTAGTCCCAGATCTCAC-1 Sample0   0.994601202703  0.00139656759533  0.994601202703    0.0         0.0         0.00139656759533
 
 ```
 We also generate a HTML file cotaining output figures
@@ -146,7 +147,7 @@ We also generate a HTML file cotaining output figures
 
 - Scatter plot of p1 and p2 for doubelt identification. Users can modify the cutoff of p1 and p2 based on the plot
 
-![Image text](https://github.com/tangzhj/MitoSort/blob/main/example_output_figures/p_value.pdf)
+![Image text](https://github.com/tangzhj/MitoSort/blob/main/example_output_figures/p_value.png)
 
 - Clean allele frequency matrix for singlets
 
