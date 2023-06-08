@@ -146,7 +146,7 @@ We also generate a HTML file cotaining output figures
 
 - Scatter plot of p1 and p2 for doubelt identification. Users can modify the cutoff of p1 and p2 based on the plot
 
-![Image text](https://github.com/tangzhj/MitoSort/blob/main/example_output_figures/p_value.png)
+![Image text](https://github.com/tangzhj/MitoSort/blob/main/example_output_figures/p_value.pdf)
 
 - Clean allele frequency matrix for singlets
 
