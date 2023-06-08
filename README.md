@@ -109,6 +109,9 @@ Options:
 
   --p2_cutoff TEXT       minimun cutoff of p2 for doublet identification.
                          Default to be 0.1
+                         
+  --method               Default is 'full', if the number of cell varies 
+                         greatly in different samples, try 'direct'.
 
   -h, --help             Show this message and exit.
 ```
