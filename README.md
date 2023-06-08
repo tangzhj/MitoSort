@@ -121,19 +121,19 @@ The important output files are
   - `result_pvalue.txt`  
 The following is example of `result_pvalue.txt`, which includes the cell barcode, singlet/doublet status, assigned sample, p1 and p2:
 ```
-Barcode         Demultiplex P_value_1   P_value_2     Sample0_Pr      Sample1_Pr      Sample2_Pr      Sample3_Pr
-LibATCACCACTCCCAATAG-1 Sample2   1.0       0.00205835430593  0.00205835430593  0.0         1.0         0.000257875653677
-LibACGAGTTAGTGATGCTT-1 Sample0   0.998651193644  0.00733731472454  0.998651193644    0.0         0.0         0.00733731472454
-LibBCAGCTGGGTTGCCGCA-1 Sample1   1.0       0         0.0         1.0         0.0         0.0
-LibCTAAGTGCGTATTCGCA-1 Doublet   0.590786198879  0.329170270029    0.000912548265621 0.329170270029    0.00440488270379  0.590786198879
-LibBACCCAAACATGGCCTG-1 Sample0   1.0       0.00413587262409  1.0         0.000530469189207 0.0         0.00413587262409
-LibBTCAAGACCACCGATCG-1 Sample3   0.996511939525  0.00733825148285  0.00733825148285  0.00676639717093  0.0         0.996511939525
-LibAAGACAAAAGTAGACCG-1 Sample1   0.992696439997  0.00449414934583  0.0         0.992696439997    0.00449414934583  0.0
-LibCTAGGAGGGTGTCCTTC-1 Sample3   0.994666446983  0         0.0         0.0         0.0         0.994666446983
-LibBAGATTCGGTGATCAGG-1 Doublet   0.636443320426  0.345761737915    0.636443320426    0.345761737915    0.0         0.00109596204691
-LibBGAAGAGCGTGCTGGCT-1 Sample3   0.993330672446  0.0         0.0         0.0         0.0         0.993330672446
-LibACCCTCTCAGGGCTCTC-1 Sample2   0.995806847294  0.0         0.0         0.0         0.995806847294    0.0
-LibDTAGTCCCAGATCTCAC-1 Sample0   0.994601202703  0.00139656759533  0.994601202703    0.0         0.0         0.00139656759533
+Barcode                   Demultiplex  P_value_1        P_value_2          Sample0_Pr         Sample1_Pr         Sample2_Pr         Sample3_Pr
+LibA_TCACCACTCCCAATAG-1   Sample2      1.0              0.00205835430593   0.00205835430593   0.0                1.0                0.000257875653677
+LibA_CGAGTTAGTGATGCTT-1   Sample0      0.998651193644   0.00733731472454   0.998651193644     0.0                0.0                0.00733731472454
+LibB_CAGCTGGGTTGCCGCA-1   Sample1      1.0              0.0                0.0                1.0                0.0                0.0
+LibC_TAAGTGCGTATTCGCA-1   Doublet      0.590786198879   0.329170270029     0.000912548265621  0.329170270029     0.00440488270379   0.590786198879
+LibB_ACCCAAACATGGCCTG-1   Sample0      1.0              0.00413587262409   1.0                0.000530469189207  0.0                0.00413587262409
+LibB_TCAAGACCACCGATCG-1   Sample3      0.996511939525   0.00733825148285   0.00733825148285   0.00676639717093   0.0                0.996511939525
+LibA_AGACAAAAGTAGACCG-1   Sample1      0.992696439997   0.00449414934583   0.0                0.992696439997     0.00449414934583   0.0
+LibC_TAGGAGGGTGTCCTTC-1   Sample3      0.994666446983   0.0                0.0                0.0                0.0                0.994666446983
+LibB_AGATTCGGTGATCAGG-1   Doublet      0.636443320426   0.345761737915     0.636443320426     0.345761737915     0.0                0.00109596204691
+LibB_GAAGAGCGTGCTGGCT-1   Sample3      0.993330672446   0.0                0.0                0.0                0.0                0.993330672446
+LibA_CCCTCTCAGGGCTCTC-1   Sample2      0.995806847294   0.0                0.0                0.0                0.995806847294     0.0
+LibD_TAGTCCCAGATCTCAC-1   Sample0      0.994601202703   0.00139656759533   0.994601202703     0.0                0.0                0.00139656759533
 
 ```
 We also generate a HTML file cotaining output figures
