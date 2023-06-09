@@ -103,9 +103,6 @@ def simulate_reads_for_cell_barcode(args,args2):
             return a
         else:
 
-
-
-
             # Select a random set of matching reads
             selected_reads = random.sample(matching_reads, min(int(read_count), int(want_reads)))
 
@@ -139,7 +136,6 @@ def simulate_reads_for_cell_barcode(args,args2):
             simulated_bam.write(read)
 
         return a
-
 
     #-------------------------------------------#doublet
     else:
@@ -178,7 +174,6 @@ def simulate_reads_for_cell_barcode(args,args2):
                 #    read.reference_id = 24
                 #    read.reference_name = "chrM"
         cell_bam.close()
-
 
 
         #-------------------------------------------
@@ -285,13 +280,6 @@ def simulate_reads_for_cell_barcode(args,args2):
             return a
 
 
-
-        
-
-
-
-        
-
 ##
 
 get_sample_count = []
@@ -318,20 +306,9 @@ merged_bam = pysam.AlignmentFile("../merged_10people.bam", "rb")
 
 
 
-
-
 if __name__ == "__main__":
 
-
-   
-
-
-
     start_time = time.time()
-
-
-
-
 
     sample_dir = {
     'CD34':'../CD34_genome_bam/',
@@ -343,11 +320,6 @@ if __name__ == "__main__":
     'sample7':'../sample7_genome_bam/',
     'lib2':'../lib2_genome_bam/'
     }    
-
-
-
-
-
 
 
     #sample_names = sample(['CD34','BMMC','15#16','CRC','CCL1','sample1','sample7','lib2'],sample_num)
@@ -402,8 +374,6 @@ if __name__ == "__main__":
 
 
 
-
-
     # Loop through each sample and simulate reads for the selected barcodes
 
     #pool = Pool(processes=5)
@@ -454,9 +424,6 @@ if __name__ == "__main__":
                     results = simulate_reads_for_cell_barcode(args,"silglet")
 
         
-
-
-
 
     #pool.close()
     #pool.join()

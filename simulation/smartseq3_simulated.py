@@ -57,16 +57,10 @@ def simulate_reads_for_cell_barcode(args,args2):
                 matching_reads.append(read)
         cell_bam.close()
 
-
-
-
         if len(matching_reads) < want_reads :
             print('+++++++++++++++++++++++++++++++ no enough matching reads')
             return 'a'
         else:
-
-
-
 
             # Select a random set of matching reads
             selected_reads = random.sample(matching_reads, int(want_reads))
@@ -84,7 +78,6 @@ def simulate_reads_for_cell_barcode(args,args2):
         
             print(a)
 
-            
             get_a_count.append(a)
 
             if sample not in dict_cell:
@@ -127,25 +120,12 @@ merged_bam = pysam.AlignmentFile("../zUMIs/CB_sorted_each_donor_sample_200_filte
 # Create a new BAM file and write the simulated reads to it
 #simulated_bam = pysam.AlignmentFile("{}_{}_simulated.bam".format(num_cells_per_sample, want_reads), "wb", template=merged_bam)
 
-
-
-
+s
 
 if __name__ == "__main__":
 
 
-   
-
-
-
     start_time = time.time()
-
-
-
-
-
-
-
 
 
     #sample_names = sample(['CD34','BMMC','15#16','CRC','CCL1','sample1','sample7','lib2'],sample_num)
