@@ -1,10 +1,11 @@
-#!/usr/bin/python
+#!/data/R04/chenbzh5/miniconda2/envs/MitoSort/bin/python
 
 import os
 import pysam as ps
 import pandas as pd
 import numpy as np
 import datetime
+
 
 
 def record_time():
@@ -160,7 +161,7 @@ def MT_realign(bam_file,genome_fasta,gatk_path,output_dir,data_type):
     # Index BAM file that containing reads mapped to chrM
     print("["+record_time()+"] Index BAM file that containing reads mapped to chrM")
     subprocess.call(["samtools", "index", "possorted_chrM.bam"])
-
+    '''
     if data_type == "ATAC":
         print("["+record_time()+"] Create target intervals list using GATK RealignerTargetCreator")
         subprocess.call(["java", "-Xmx8g", "-jar", gatk_path, "-R", genome_fasta, "-T", "RealignerTargetCreator", "-nt", "10", "-I", "possorted_chrM.bam", "-o", "chrM_realignertargetcreator.intervals"])
@@ -168,6 +169,7 @@ def MT_realign(bam_file,genome_fasta,gatk_path,output_dir,data_type):
         # Realign reads using IndelRealigner
         print("["+record_time()+"] Realign reads using GATK IndelRealigner")
         subprocess.call(["java", "-Xmx100g", "-jar", gatk_path, "-R", genome_fasta, "-T", "IndelRealigner", "-filterNoBases", "-maxReads","10000000","-I","possorted_chrM.bam","-targetIntervals","chrM_realignertargetcreator.intervals","-o","possorted_chrM_realign.bam"])
+    '''
 
     end = time.time()
     elapsed = end-start
@@ -234,7 +236,7 @@ def Generate_SNP_matrix(bam_file,genome_fasta,chrm_length,varscan_path,cell_barc
 
     # subset part of reads for faster computation
     print("["+record_time()+"] Subset reads for faster computation")
-    subset_cmd = ["samtools", "view", "-s", "0.2", "-b",os.path.join(BAM_output_dir, "possorted_chrM_realign.bam"),">",os.path.join(BAM_output_dir, "possorted_chrM_realign_0.2.bam")]
+    subset_cmd = ["samtools", "view", "-s", "0.2", "-b",bam_file,">",os.path.join(BAM_output_dir, "possorted_chrM_realign_0.2.bam")]
     subprocess.call(" ".join(subset_cmd), shell=True)
 
     # Generate text pileup output for chrM BAM file, with each line representing the pileup of reads at a single genomic position
@@ -329,6 +331,7 @@ def Generate_SNP_matrix(bam_file,genome_fasta,chrm_length,varscan_path,cell_barc
     # generate SNP matrix
     print("["+record_time()+"] Generating SNP matrices")
     bam_dir=os.path.join(output_dir,"MitoSort/temp/")
+    temp_dir=os.path.join(output_dir,"MitoSort/temp")
     snv_file=os.path.join(output_dir,"MitoSort/BAM/possorted_chrM_realign.snv")
     barcode_file=os.path.join(output_dir,"MitoSort/barcode/barcode_result.txt")
     filtered_vcf = pd.read_csv(snv_file,sep="\t") ##germline snp
@@ -339,12 +342,14 @@ def Generate_SNP_matrix(bam_file,genome_fasta,chrm_length,varscan_path,cell_barc
     f = pd.read_csv(barcode_file,sep="\t") ##cellbarcodes
     barcodes = {}
     if cell_tag == "CR":
+
+
         for position, row in f.iterrows():
             i = str(row['barcode']).replace("-1","")##cell barcode in multi is CR and not '-1' in cell barcodes.
             barcodes[i.strip()] = 0  
     else:
         for position, row in f.iterrows():
-            i = str(row['barcode']).replace("-1","-1")
+            i = str(row['barcode'])
             barcodes[i.strip()] = 0
     barcodes_lit = list(barcodes)
 
@@ -385,7 +390,8 @@ def Generate_SNP_matrix(bam_file,genome_fasta,chrm_length,varscan_path,cell_barc
 @click.option('--clusters', '-k', required=True,help='number of pooled individuals')
 @click.option("--p1_cutoff", required = False, default = "0.9", help = "maximum cutoff of p1 for doublet identification. Default to be 0.9")
 @click.option("--p2_cutoff", required = False, default = "0.1", help = "minimun cutoff of p2 for doublet identification. Default to be 0.1")
-def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
+@click.option("--method", required = False, default = "full", help = "if not 'full' it would be 'direct',which direct caculate p_value. ")
+def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff,method):
     """
     Identifying cross-genotype doublets and demultiplexing samples
     """
@@ -429,7 +435,6 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
     import time
     sys.setrecursionlimit(100000)
     print("imports done")
-    
     start = time.time()
     demultiplex_dir=os.path.join(output_dir,"MitoSort/Demultiplex_output")
     if not os.path.exists(demultiplex_dir):
@@ -444,7 +449,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
     path4 = os.path.join(barcode_dir,"barcode_result.txt")
 
     sample_num = int(clusters)
-    confident_germline_ratio = 0.5
+    confident_germline_ratio = 0.01 #0.5
     D_x = float(p1_cutoff)
     D_y = float(p2_cutoff)
 
@@ -459,6 +464,10 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
 
         data3 = pd.read_csv(path3,sep = ",",header = 0)
         data3.head()
+
+        alt_data = alt_data.drop_duplicates(keep='first')
+        ref_data = ref_data.drop_duplicates(keep='first')
+        data3 = data3.drop_duplicates(keep='first')
 
         matrix_ref = ref_data.T
         matrix_ref.columns = matrix_ref.iloc[0,:]
@@ -493,10 +502,11 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         print("Filter variants!")
         matrix_fre_pre = matrix_fre #copy
         matrix_fre  = pd.DataFrame(matrix_fre)
+
         barcode_lit =  matrix_fre.index
 
         ##methods2
-        a = np.sum(matrix_fre.loc[barcode_lit,:]>0.95,axis=0)/np.sum(matrix_fre.loc[barcode_lit,:]>0.05,axis=0)
+        a = np.sum(matrix_fre.loc[barcode_lit,:]>0.95,axis=0)/np.sum(matrix_fre.loc[barcode_lit,:]>0.05,axis=0)##>0.05
         matrix_alt = matrix_alt.where(matrix_alt.notnull(), 0)
         seletec_germ = []
         for i in a.index:
@@ -505,15 +515,35 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
                 seletec_germ.append(i)
         
         #generate final matrix.
+        #need to filter low depth
+        def filtered_depth_again(matrix_depth):
+            depth_percell = np.mean(matrix_depth.loc[:,:],axis = 1)
+
+            low_barcode = []
+            for i in range(len(depth_percell)):
+                if depth_percell[i] < 5:
+                    low_barcode.append(depth_percell.index[i])
+
+            #can filter barcode
+            barcode_lit = matrix_depth.index
+          
+            barcode_lit =  list(set(barcode_lit) -set(low_barcode)) #barcode_lit 
+            print(len(matrix_fre.index),len(barcode_lit),len(low_barcode))
+            return(low_barcode,barcode_lit)
+        ##
+        (low_barcode,barcode_lit2) = filtered_depth_again(matrix_depth)
 
         To_GMM_barcode = barcode_lit
+        To_GMM_barcode2 = barcode_lit2
 
         To_GMM_matrix = matrix_fre.loc[barcode_lit,seletec_germ]
+
+        high_depth_matrix = matrix_fre.loc[barcode_lit2,seletec_germ]
 
 
         #final_matrix to GMM or kmean.
 
-        X = np.array(To_GMM_matrix) #filtered doublet & low_depth
+        X = np.array(high_depth_matrix) #filtered doublet & low_depth
 
         ##define cluster by kmeans.
         sample_num = sample_num
@@ -549,7 +579,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         )
         ax.patches.append(rect)
         sil_max_index = sil.index(max(sil))
-        if sil[sil_max_index] - sil[sil_max_index-1] < 0.05:
+        if sil[sil_max_index] - sil[sil_max_index-1] < 0.001:
             
             #print("sil:",sil[sil_max_index],sil[sil_max_index-1])
             sil_max_index = sil_max_index-1
@@ -564,9 +594,14 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         plt.savefig("{}/sihouette_score.pdf".format(output_path),dpi = 400,bbox_inches = 'tight') # save figure 
         plt.show()
         
-        ab = sns.clustermap(To_GMM_matrix, metric="euclidean")
-        ab.ax_heatmap.set_xlabel("Site")
-        ab.savefig("{}/raw_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') #save figure
+        if len(barcode_lit)>2000:
+            ab = sns.clustermap(To_GMM_matrix.iloc[:2000,:], metric="euclidean")
+            ab.ax_heatmap.set_xlabel("Site")
+            ab.savefig("{}/raw_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') #save figure
+        else:
+            ab = sns.clustermap(To_GMM_matrix, metric="euclidean")
+            ab.ax_heatmap.set_xlabel("Site")
+            ab.savefig("{}/raw_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') #save figure
 
 
         kmeans = KMeans(n_clusters = sample_num,max_iter=1000,tol=1e-10,algorithm='full',n_init=100)
@@ -587,7 +622,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         for i in range(len(labels)):
             for j in range(sample_num):
                 if labels[i]==j:
-                    locals()['cell_'+ str(j)].append(To_GMM_barcode[i])
+                    locals()['cell_'+ str(j)].append(To_GMM_barcode2[i])
 
 
 
@@ -598,10 +633,12 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
 
         for k in range(sample_num):
             #print(locals()['cell_'+ str(j)][1:20])
-            jkl = np.sum(To_GMM_matrix.loc[locals()["cell_"+str(k)],:][To_GMM_matrix.loc[locals()["cell_"+str(k)],:]>=0.99],axis = 0)/(len(locals()["cell_"+str(k)]))
-            for i in range(len(To_GMM_matrix.columns)):
-                if jkl[i]>0.6:
-                    locals()["cell_"+str(k)+"_site"].append(To_GMM_matrix.columns[i])
+            jkl = np.sum(high_depth_matrix.loc[locals()["cell_"+str(k)],:][high_depth_matrix.loc[locals()["cell_"+str(k)],:]>=0.99],axis = 0)/(len(locals()["cell_"+str(k)]))
+            for i in range(len(high_depth_matrix.columns)):
+                if jkl[i]>0.1:
+                    locals()["cell_"+str(k)+"_site"].append(high_depth_matrix.columns[i])
+
+
 
         site_dic = []
         for k in range(sample_num):
@@ -617,19 +654,26 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
                 double_lit.append(key)
 
         useful_site=list(set(dicts)-(set(double_lit)))
+        print(len(useful_site))
 
         #get clean_matrix
         clean_matrix = To_GMM_matrix.reindex(columns = useful_site)
 
-        ad = sns.clustermap(clean_matrix, metric="euclidean")
-        ad.ax_heatmap.set_xlabel("Site")
-        ad.savefig("{}/clean_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') 
+        if len(barcode_lit)>2000:
+            ad = sns.clustermap(clean_matrix.iloc[:2000,:], metric="euclidean")
+            ad.ax_heatmap.set_xlabel("Site")
+            ad.savefig("{}/clean_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') 
+        else:
+            ad = sns.clustermap(clean_matrix, metric="euclidean")
+            ad.ax_heatmap.set_xlabel("Site")
+            ad.savefig("{}/clean_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') 
 
         myVar3 = [] # specific variants for each sample
         for i in range(sample_num):
             createVar['single_cell_'+ str(i)] = []
             myVar3.append('single_cell_'+ str(i)) 
             locals()['single_cell_'+ str(i)] = set(locals()["cell_"+str(i)+"_site"]).difference(set(double_lit))
+            print(locals()['single_cell_'+ str(i)])
             #print( locals()['cell_'+ str(i)][1:5],locals()['single_cell_'+ str(i)])
 
 
@@ -646,10 +690,13 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         tag = 0
         var_lit = myVar3
         cell_lit = myVar1
+        for j in low_barcode:
+            locals()['cell_'+ str(sample_num-1)].append(j)
         #def caculate_p_each_k(cell_lit,var_lit,matrix_alt,matrix_ref,):
         if 1:
             cell_pvalue_dic = {}
             cell_pvalue_dic1 = {}
+            unassign_cell  = []
             for c in cell_lit:
                 cells = locals()[str(c)]
                 for a_cell in cells:
@@ -660,13 +707,16 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
                         continue
                     tag = tag + 1
                     #print(tag)
-                    if tag > 100000:
+                    if tag > 1000000:
                         break
 
                     k_alt_lit = []
                     k_ref_lit = []
                     for l in var_lit:
                         if c.split("_")[1] == l.split("_")[2]:
+                            
+
+
                             ppsum = 1
                             #for a_site in locals()[str(l)]:
                             #    k_alt = np.mean(matrix_alt.loc[locals()[str(c)],a_site])
@@ -674,14 +724,33 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
                             #    k_alt_lit.append(k_alt)
                             #    k_ref_lit.append(k_ref)
                             #k_alt = np.mean(k_alt_lit)  
-                            #k_ref = np.mean(k_ref_lit)  
+                            #k_ref = np.mean(k_ref_lit) 
+
+                            #................................................. 
                             ll = list(locals()[str(l)])
-                            #print(ll)
-                            k_alt = np.mean(np.sum(matrix_depth.loc[locals()[str(c)],ll],axis = 1))
-                            #k_ref = np.mean(np.sum(matrix_ref.loc[locals()[str(c)],locals()[str(l)]],axis = 1))
-                            k_ref = 0
+
+                            #site_fine = np.sum(matrix_fre.loc[a_cell,ll]>0.05)
+                            #if site_fine/float(len(ll)) < 0.01:
+                                #unassign_cell.append(a_cell)
+                            #................................................. 
+                            depth_percell = np.mean(matrix_depth.loc[a_cell,:])
+                            if depth_percell<1:
+                                unassign_cell.append(a_cell)
+
+
                             c_alt = np.sum(matrix_alt.loc[a_cell,ll])
                             c_ref = np.sum(matrix_ref.loc[a_cell,ll])
+                            if c_alt > c_ref:
+
+                                #print(ll)
+                                k_alt = np.mean(np.sum(matrix_depth.loc[locals()[str(c)],ll],axis = 1))
+                                #k_ref = np.mean(np.sum(matrix_ref.loc[locals()[str(c)],locals()[str(l)]],axis = 1))
+                                k_ref = 0
+                            else:
+                                k_alt = 0
+                                k_ref = 10
+
+
                             alpha_post = k_alt+c_alt
                             beta_post = k_ref+c_ref
                             #print("############",c,l,"####################")
@@ -695,6 +764,11 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
                         else:
                             ppsum = 1
                             ll = list(locals()[str(l)])
+                            c_alt = np.sum(matrix_alt.loc[a_cell,ll])
+                            c_ref = np.sum(matrix_ref.loc[a_cell,ll])
+                            if c_alt > c_ref:
+                                k_alt = 10
+                                k_ref = 0
                             #for a_site in locals()[str(l)]:
                             #    k_alt = np.mean(matrix_alt.loc[locals()[str(c)],a_site])
                             #    k_ref = np.mean(matrix_ref.loc[locals()[str(c)],a_site])
@@ -703,11 +777,11 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
                             #k_alt = np.mean(k_alt_lit)  
                             #k_ref = np.mean(k_ref_lit)  
                             #k_alt = np.mean(np.sum(matrix_alt.loc[locals()[str(c)],locals()[str(l)]],axis = 1))
-                            k_alt = 0
-                            k_ref = np.mean(np.sum(matrix_depth.loc[locals()[str(c)],ll],axis = 1))
+                            else:
+                                k_alt = 0
+                                k_ref = np.mean(np.sum(matrix_depth.loc[locals()[str(c)],ll],axis = 1))
 
-                            c_alt = np.sum(matrix_alt.loc[a_cell,ll])
-                            c_ref = np.sum(matrix_ref.loc[a_cell,ll])
+
                             alpha_post = k_alt+c_alt
                             beta_post = k_ref+c_ref
                             #print(k_alt,k_ref,c_alt,c_ref)
@@ -807,7 +881,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
                 known_class.append("S")
                 known_bar.append(bar_lit[i])
 
-            elif raw_lit1[i] < D_x or raw_lit2[i] > D_y:## give doublet cell "D" label
+            elif raw_lit1[i] < D_x and raw_lit2[i] > D_y:## give doublet cell "D" label
                 new_lit1.append(raw_lit1[i])
                 new_lit2.append(raw_lit2[i])
                 known_class.append("D")
@@ -845,7 +919,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
 
         #print("Singlet:{}\nDoublet:{}".format,len(s_lit),len(d_lit))
         plt.figure(figsize=(10,10))
-        plt.scatter(np.array(s_lit)[:,0], np.array(s_lit)[:,1], c="#3b4cc0", marker="o", picker=True)
+        plt.scatter(np.array(s_lit[1:500])[:,0], np.array(s_lit[1:500])[:,1], c="#3b4cc0", marker="o", picker=True)
         if len(d_lit) > 0:
             plt.scatter(np.array(d_lit)[:,0], np.array(d_lit)[:,1], c="#b40426", marker="o", picker=True)
 
@@ -890,9 +964,14 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
 
         #sns.clustermap(matrix_final.loc[low_barcode,useful_site], metric="euclidean",figsize=(45, 45),yticklabels=False,col_cluster=True,row_cluster=True)
 
-        ac = sns.clustermap(clean_matrix.loc[final_barcode,:], metric="euclidean")
-        ac.ax_heatmap.set_xlabel("Site")
-        ac.savefig("{}/Singlet_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') 
+        if len(final_barcode)>2000:
+            ac = sns.clustermap(clean_matrix.loc[final_barcode[:2000],:], metric="euclidean")
+            ac.ax_heatmap.set_xlabel("Site")
+            ac.savefig("{}/Singlet_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') 
+        else:
+            ac = sns.clustermap(clean_matrix.loc[final_barcode,:], metric="euclidean")
+            ac.ax_heatmap.set_xlabel("Site")
+            ac.savefig("{}/Singlet_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') 
 
         X = matrix_final
         print("matrix_final:",matrix_final.shape)
@@ -904,14 +983,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         kmeans.labels_
         
         final_labels = labels
-
-        ## write output 
-        final_dict = {}
-        for i in all_bar:
-            if i in clean_barcode:
-                final_dict[i] = "Doublet"
-            if i in final_barcode_sorted:
-                final_dict[i] = "Sample"+str(final_labels[final_barcode_sorted.index(i)])
+       
 
         finalVar1 = [] 
         for i in range(sample_num):
@@ -931,14 +1003,434 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
         for k in range(sample_num):
             jkl = np.sum(matrix_final.loc[locals()["end_cell_"+str(k)],:][matrix_final.loc[locals()["end_cell_"+str(k)],:]>=0.99],axis = 0)/(len(locals()["end_cell_"+str(k)]))
             for i in range(len(matrix_final.columns)):
-                if jkl[i]>0.6:
+                if jkl[i]>0.1:
                     locals()["end_cell_"+str(k)+"_site"].append(matrix_final.columns[i])
+
+
+        ## get mutipul p valuse index from two sample specific germline set: 1.myVar3  2.finalVar2
+        def calculate_similarity(list1, list2):
+            similarity_count = len(set(list1) & set(list2))
+            similarity_ratio = similarity_count / len(list1)
+            return similarity_ratio
+
+        new_index_of_germline_set = []
+
+        for i in range(len(myVar3)):
+            for l in range(len(finalVar2)):
+                similarity_ratio = calculate_similarity(myVar3, finalVar2)
+                if sorted(locals()[str(myVar3[i])]) == sorted(locals()[str(finalVar2[l])]) or similarity_ratio > 0.6:
+                    new_index_of_germline_set.append(l)
+
+
+         ## change sample of cell and need to recheck the cluster wiht p value?
+        final_dict = {}
+        for i in all_bar:
+
+            if i in unassign_cell:
+                final_dict[i] = "Unassign"
+            if i in clean_barcode and i not in unassign_cell:
+                final_dict[i] = "Doublet"
+
+            if i in final_barcode_sorted and i not in unassign_cell:
+                p_value = np.array(cell_pvalue_dic[i])
+                all_p_value_list = list(p_value[new_index_of_germline_set])##get p_value and reorder by new index.
+                max_p_index = all_p_value_list.index(max(all_p_value_list))
+
+                #sample_of_cell = final_labels[final_barcode_sorted.index(i)]
+                #changed_cell_sample = new_index_of_germline_set[sample_of_cell]
+                final_dict[i] = "Sample"+str(max_p_index)
+
+
+            
+
 
         specific_germline = {}
         for k in range(sample_num):
-            specific_germline["Sample"+str(k)] = locals()["end_cell_"+str(k)+"_site"]
+            k2 = new_index_of_germline_set[k]
+            specific_germline["Sample"+str(k2)] = locals()["end_cell_"+str(k2)+"_site"]
             
-        return(specific_germline,all_p,all_class,all_bar,clean_matrix,useful_site,var_lit,wrong_cell,clean_barcode,matrix_fre,final_dict,matrix_final)
+        return(cell_pvalue_dic,new_index_of_germline_set,specific_germline,all_p,all_class,all_bar,clean_matrix,useful_site,var_lit,wrong_cell,clean_barcode,matrix_fre,final_dict,matrix_final)
+
+
+
+    ##--------------##
+    ##run_pip_simple##
+    ##              ##
+    ##              ##
+    ##              ##
+    ##--------------##
+    def run_pip_simple(matrix_alt,matrix_ref,matrix_fre,matrix_depth,sample_num,confident_germline_ratio,D_x,D_y):
+        print("Filter variants!")
+        matrix_fre_pre = matrix_fre #copy
+        matrix_fre  = pd.DataFrame(matrix_fre)
+
+        barcode_lit =  matrix_fre.index
+
+        ##methods2
+        a = np.sum(matrix_fre.loc[barcode_lit,:]>0.95,axis=0)/np.sum(matrix_fre.loc[barcode_lit,:]>0.05,axis=0)##>0.05
+        b = np.sum(matrix_fre.loc[barcode_lit,:]>0.95,axis=0)/np.sum(matrix_fre.loc[barcode_lit,:]>=0.0,axis=0)##>0.05
+        matrix_alt = matrix_alt.where(matrix_alt.notnull(), 0)
+        seletec_germ = []
+        for i in a.index:
+            #print(i,a[i])
+            
+            if a[i] > confident_germline_ratio and b[i] < (2.0/sample_num):
+                seletec_germ.append(i)
+        #generate final matrix.
+
+        To_GMM_barcode = barcode_lit
+
+        To_GMM_matrix = matrix_fre.loc[barcode_lit,seletec_germ]
+
+
+        #final_matrix to GMM or kmean.
+
+        X = np.array(To_GMM_matrix) #filtered doublet & low_depth
+
+        ##define cluster by kmeans.
+        sample_num = sample_num
+        print('sample_num:',sample_num)
+
+        sil = []
+        kmax = 12
+
+        # dissimilarity would not be defined for a single cluster, thus, minimum number of clusters should be 2
+        for k in range(2, kmax+1):
+            kmeans = KMeans(n_clusters = k).fit(X)
+            labels = kmeans.labels_
+            sil.append(silhouette_score(X, labels, metric = 'euclidean'))
+        fig,ax = plt.subplots(figsize = (8,6))
+        ax.set_facecolor("white")
+        ax.grid(ls="")
+         # Convert bottom-left and top-right to display coordinates
+        x_0, y_0 = ax.transAxes.transform((0, 0))
+        x_1, y_1 = ax.transAxes.transform((1, 1))
+
+        # Convert back to Axes coordinates
+        x_0, y_0 = ax.transAxes.inverted().transform((x_0, y_0))
+        x_1, y_1 = ax.transAxes.inverted().transform((x_1, y_1))
+        width = 1
+        rect = plt.Rectangle(
+            (x_0, y_0), x_1-x_0, y_1-y_0,
+            color="black",
+            transform=ax.transAxes,
+            zorder=-1,
+            lw=2*width+0.02,
+            fill=None,
+        )
+        ax.patches.append(rect)
+        sil_max_index = sil.index(max(sil))
+        if sil[sil_max_index] - sil[sil_max_index-1] < 0.0001:
+            
+            #print("sil:",sil[sil_max_index],sil[sil_max_index-1])
+            sil_max_index = sil_max_index-1
+            
+        plt.axvline(x = sil_max_index+2, ymin = 0.05, ymax = 1.0, color = 'r',ls='--',label = "Best k="+str(sil_max_index+2))
+        
+        plt.legend(loc = "best",fontsize=15)
+        plt.plot(range(2,kmax+1,1), sil, '-p', color='gold')
+        plt.xticks(range(1,kmax+1,1))
+        plt.xlabel('number of clusters, k')
+        plt.ylabel('silhouette_score')
+        plt.savefig("{}/sihouette_score.pdf".format(output_path),dpi = 400,bbox_inches = 'tight') # save figure 
+        plt.show()
+
+
+
+
+        
+        if len(barcode_lit)>2000:
+            ab = sns.clustermap(To_GMM_matrix.loc[barcode_lit[1:2000],:], metric="euclidean")
+            ab.ax_heatmap.set_xlabel("Site")
+            ab.savefig("{}/raw_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') #save figure
+        else:
+            ab = sns.clustermap(To_GMM_matrix.loc[:,:], metric="euclidean")
+            ab.ax_heatmap.set_xlabel("Site")
+            ab.savefig("{}/raw_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') #save figure
+
+
+        if len(barcode_lit)>2000:
+            ad = sns.clustermap(To_GMM_matrix.loc[barcode_lit[1:2000],seletec_germ], metric="euclidean")
+            ad.ax_heatmap.set_xlabel("Site")
+            ad.savefig("{}/clean_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') 
+        else:
+            ad = sns.clustermap(To_GMM_matrix.loc[:,seletec_germ], metric="euclidean")
+            ad.ax_heatmap.set_xlabel("Site")
+            ad.savefig("{}/clean_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') 
+
+
+
+
+        kmeans = KMeans(n_clusters = sample_num,max_iter=1000,tol=1e-10,algorithm='full',n_init=100)
+        kmeans.fit(X.T)
+        labels = kmeans.labels_
+        kmeans.labels_
+
+
+
+        createVar = locals()
+        myVar3 = [] # specific variants for each sample
+        for i in range(sample_num):
+            createVar['single_cell_'+ str(i)] = []
+            myVar3.append('single_cell_'+ str(i)) 
+            site = []
+            for j in range(len(seletec_germ)):
+                if labels[j] == i:
+                    site.append(seletec_germ[j]) 
+            
+            locals()['single_cell_'+ str(i)] = site
+            #print( locals()['cell_'+ str(i)][1:5],locals()['single_cell_'+ str(i)])
+
+
+
+
+        ##caculate p-value in first fitted cluster and second fitted
+        print("caculate p-value!")
+        tag = 0
+        var_lit = myVar3
+        cell_lit = barcode_lit
+        #def caculate_p_each_k(cell_lit,var_lit,matrix_alt,matrix_ref,):
+        if 1:
+            cell_pvalue_dic = {}
+            cell_pvalue_dic1 = {}
+            unassign_cell  = []
+            for c in cell_lit:
+                a_cell = c
+                cell_pvalue_dic[a_cell] = []
+                cell_pvalue_dic1[a_cell] = []
+                if 1:
+
+                    k_alt_lit = []
+                    k_ref_lit = []
+                    for l in var_lit:
+                        if 1:
+                            ppsum = 1
+                            #for a_site in locals()[str(l)]:
+                            #    k_alt = np.mean(matrix_alt.loc[locals()[str(c)],a_site])
+                            #    k_ref = np.mean(matrix_ref.loc[locals()[str(c)],a_site])
+                            #    k_alt_lit.append(k_alt)
+                            #    k_ref_lit.append(k_ref)
+                            #k_alt = np.mean(k_alt_lit)  
+                            #k_ref = np.mean(k_ref_lit)  
+                            ll = list(locals()[str(l)])
+
+
+                            c_alt = np.sum(matrix_alt.loc[a_cell,ll])
+                            c_ref = np.sum(matrix_ref.loc[a_cell,ll])
+                            if c_alt > c_ref:
+                            #print(ll)
+                                k_alt = 10
+                            #k_ref = np.mean(np.sum(matrix_ref.loc[locals()[str(c)],locals()[str(l)]],axis = 1))
+                                k_ref = 0
+                            else:
+                                k_alt = 0
+                            #k_ref = np.mean(np.sum(matrix_ref.loc[locals()[str(c)],locals()[str(l)]],axis = 1))
+                                k_ref = 10
+
+
+                            alpha_post = k_alt+c_alt
+                            beta_post = k_ref+c_ref
+
+                            post_mean = alpha_post/(alpha_post + beta_post)
+                            post_mode = (alpha_post-1)/(alpha_post+beta_post-2)
+                            if post_mode>1:
+                                post_mode = 1
+                            if post_mode<0:
+                                post_mode = 0
+
+                                #print(post_mean)
+                            #ppsum = ppsum * abs(post_mean)
+                            cell_pvalue_dic[a_cell].append(post_mean)
+                            cell_pvalue_dic1[a_cell].append(post_mode)
+
+        #print(cell_pvalue_dic)
+        lit = []
+        raw_lit1 = []
+        raw_lit2 = []
+        bar_lit = [] 
+
+        wrong_cell = []
+
+        lit1 = []
+        lit2 = []
+        lit_doublet1 = []
+        lit_doublet2 = []
+        lit_con = []
+        index_lit1 = []
+        index_lit2 = []
+        psort_dic = {}
+        min_sample = 0
+        cell_pvalue_dic = cell_pvalue_dic1
+        bar = []
+        for i in cell_pvalue_dic.keys():
+
+            #k = sorted(cell_pvalue_dic[i],reverse=True)
+            indices = sorted(range(len(cell_pvalue_dic[i])),key=lambda index: cell_pvalue_dic[i][index],reverse=True)
+            k = [cell_pvalue_dic[i][index] for index in indices]
+            #print(k)
+            raw_lit1.append(k[0])
+            raw_lit2.append(k[1])
+
+            bar_lit.append(i)
+            psort_dic[i] = k
+            '''
+            if k[0]>0.99 and (k[0]+k[1])<1.1:
+                min_sample = min_sample + 1
+            if k[0]>0.95 and k[1]>0.05:
+                wrong_cell.append(i)
+
+
+            if i not in ture_doublet:
+                bar.append(i)
+
+                lit1.append(k[0])
+                lit2.append(k[1])
+            else:
+                index_lit1.append(indices[0])
+                index_lit2.append(indices[1])
+
+                lit_doublet1.append(k[0])
+                lit_doublet2.append(k[1]) 
+
+            '''
+        min_sample_ratio = min_sample/len(cell_pvalue_dic.keys())
+
+        ## define doublet
+        ##use knn
+
+        data_P = list(zip(raw_lit1, raw_lit2))
+        df3 = pd.DataFrame(np.array([raw_lit1,raw_lit2]).T,columns=['a', 'b'],index=bar_lit)
+        #print(data_P)
+
+        known_class = []
+        new_lit1 = []
+        new_lit2 = []
+        no_label_lit1 = []
+        no_label_lit2 = []
+        known_bar = []
+        prediction_bar = []
+        for i in range(len(raw_lit1)):
+            if raw_lit1[i] > 0.99 and raw_lit2[i]<0.01: ## give confident cell "S" label
+                new_lit1.append(raw_lit1[i])
+                new_lit2.append(raw_lit2[i])
+                known_class.append("S")
+                known_bar.append(bar_lit[i])
+
+            elif (raw_lit1[i] < D_x and raw_lit2[i] > D_y) :## give doublet cell "D" label
+                new_lit1.append(raw_lit1[i])
+                new_lit2.append(raw_lit2[i])
+                known_class.append("D")
+                known_bar.append(bar_lit[i])
+            else: 
+                no_label_lit1.append(raw_lit1[i])
+                no_label_lit2.append(raw_lit2[i])
+                prediction_bar.append(bar_lit[i])
+        label_data_P = list(zip(new_lit1, new_lit2))
+        nolabel_data_P = list(zip(no_label_lit1, no_label_lit2))
+
+        knn = KNeighborsClassifier(n_neighbors=5) ## n = 5
+        knn.fit(label_data_P, known_class)    
+        if nolabel_data_P:
+            prediction = knn.predict(nolabel_data_P)
+        else:
+            prediction = []
+        #print(prediction)
+        all_class = list(known_class)+list(prediction)
+        all_bar = list(known_bar)+list(prediction_bar)
+
+
+        # Generate scatter plot for training data
+
+        #colors = list(map(lambda x: '#3b4cc0' if x == "S" else '#b40426', list(known_class)+list(prediction)))
+        kp = list(known_class)+list(prediction)
+        lp = label_data_P+nolabel_data_P
+        s_lit = []
+        d_lit = []
+        for i in range(len(kp)):
+            if kp[i] == 'S':
+                s_lit.append(lp[i])
+            if kp[i] == 'D':
+                d_lit.append(lp[i])
+
+        #print("Singlet:{}\nDoublet:{}".format,len(s_lit),len(d_lit))
+        plt.figure(figsize=(10,10))
+        plt.scatter(np.array(s_lit[1:5000])[:,0], np.array(s_lit[1:5000])[:,1], c="#3b4cc0", marker="o", picker=True)
+        if len(d_lit) > 0:
+            plt.scatter(np.array(d_lit)[:,0], np.array(d_lit)[:,1], c="#b40426", marker="o", picker=True)
+
+        plt.xlim(0,1.1,0.01)
+        plt.title("first and second fitted p_value for each cell")
+        plt.xlabel('P_value_1')
+        plt.ylabel('P_value_2')
+        plt.legend(["Singlet", "Doublet"], loc='upper left', markerscale=2, fontsize="large")
+        plt.axvline(x = D_x, ymin = 0.0, ymax = 1.1, color = 'r',ls='--')
+        plt.axhline(y = D_y, xmin = 0.0, xmax = 1.1, color = 'r',ls='--')
+
+        plt.savefig("{}/p_value.pdf".format(output_path),dpi = 400,bbox_inches = 'tight') 
+        plt.show()
+        all_p = (label_data_P+nolabel_data_P)
+
+        ## find maximum cutoff for p1
+        singlet_blue1= []
+        doublet_red1 = []
+
+        c = 0
+        clean_barcode = []
+        for i in range(len(all_class)):
+            if all_class[i] == "D" and  df3.loc[all_bar[i],'a'] < 0.99:
+                clean_barcode.append(all_bar[i])
+                c += 1
+                #if clean_matrix.index[i] in true_doublet:
+                    #print(clean_matrix.index[i],litss_lit[i])
+        final_barcode = list(set(set(all_bar)-set(clean_barcode)))
+
+        if len(clean_barcode) > 10:
+            aa = sns.clustermap(To_GMM_matrix.loc[clean_barcode,:], metric="euclidean")
+            aa.ax_heatmap.set_xlabel("Site")
+            aa.savefig("{}/Doublet_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') 
+
+        if len(final_barcode)>2000:
+            ac = sns.clustermap(To_GMM_matrix.loc[final_barcode[:2000],:], metric="euclidean")
+            ac.ax_heatmap.set_xlabel("Site")
+            ac.savefig("{}/Singlet_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') 
+        else:
+            ac = sns.clustermap(To_GMM_matrix.loc[final_barcode,:], metric="euclidean")
+            ac.ax_heatmap.set_xlabel("Site")
+            ac.savefig("{}/Singlet_heatmap.png".format(output_path),dpi = 400,bbox_inches = 'tight') 
+
+        ## change sample of cell and need to recheck the cluster wiht p value?
+        final_dict = {}
+        for i in all_bar:
+
+            if i in clean_barcode:
+                final_dict[i] = "Doublet"
+
+            if i in barcode_lit and i not in clean_barcode:
+                p_value = np.array(cell_pvalue_dic[i])
+                all_p_value_list = list(p_value)##get p_value and reorder by new index.
+                max_p_index = all_p_value_list.index(max(all_p_value_list))
+
+                #sample_of_cell = final_labels[final_barcode_sorted.index(i)]
+                #changed_cell_sample = new_index_of_germline_set[sample_of_cell]
+                final_dict[i] = "Sample"+str(max_p_index)
+
+
+            
+
+
+        specific_germline = {}
+        for k in range(sample_num):
+            specific_germline["Sample"+str(k)] = locals()["single_cell_"+str(k)]
+
+        return(cell_pvalue_dic,specific_germline,all_p,all_class,all_bar,clean_barcode,matrix_fre,final_dict)
+
+
+
+
+
+
+
+
 
     def generate_html(output_path):
         # Output directory where the PNG and PDF files are located
@@ -1066,37 +1558,121 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff):
             f.write(html_content)
         print("Generate html!")
 
+
+
+######################-------------------------------##########################
     print("["+record_time()+"] Start demultiplexing")
     (matrix_alt,matrix_ref,matrix_fre,matrix_depth,fragment_data) = read_file(path1,path2,path3,path4)
 
-    (specific_germline,all_p,all_class,all_bar,clean_matrix,useful_site,var_lit,wrong_cell,clean_barcode,matrix_fre,final_dict,matrix_final) = run_pip(matrix_alt,matrix_ref,matrix_fre,matrix_depth,sample_num,confident_germline_ratio,D_x,D_y)
+    if method=="full":
+        (cell_pvalue_dic,new_index_of_germline_set,specific_germline,all_p,all_class,all_bar,clean_matrix,useful_site,var_lit,wrong_cell,clean_barcode,matrix_fre,final_dict,matrix_final) = run_pip(matrix_alt,matrix_ref,matrix_fre,matrix_depth,sample_num,confident_germline_ratio,D_x,D_y)
 
-    with open("{}/result_pvalue.txt".format(demultiplex_dir),"w") as ff:
-        ff.write("barcode\tS_or_D\tDemultiplex\tP_value_1\tP_value_2\n")
-        for i in range(len(all_bar)):
-            if all_p[i][0] > 1:
-                p1 = 1.0
-            else:
-                p1 = all_p[i][0]
-            if all_p[i][1] > 1:
-                p2 = 1.0
-            else:
-                p2 = all_p[i][1]
-            ff.write("{}\t{}\t{}\t{}\t{}\n".format(all_bar[i],all_class[i],final_dict[all_bar[i]],p1,p2))
-    ff.close()
+        def rechange_p_value_order(cell):
+            p_value = np.array(cell_pvalue_dic[cell])
+            all_p_value_list = list(p_value[new_index_of_germline_set])
+            all_p_value_list
+            return(all_p_value_list)
 
-    with open("{}/specific_germline.txt".format(demultiplex_dir),"w") as ffff:
-        ffff.write("Specific germline\tSample\n")
-        for i in specific_germline.keys():
-            for j in specific_germline[i]:
-                ffff.write("{}\t{}\n".format(j,i))
-    ffff.close()
 
-    generate_html(demultiplex_dir)
-    print("["+record_time()+"] Demultiplexing done!")
-    end = time.time()
-    elapsed = end-start
-    print("Total time:",str(time.strftime("%Hh%Mm%Ss", time.gmtime(elapsed))))
+
+
+
+
+        write_first_line = "Barcode\tDemultiplex\tP_value_1\tP_value_2"
+        for i in range(sample_num):
+            write_first_line = write_first_line+"\t"+"Sample"+str(i)+"_Pr"
+        write_first_line = write_first_line + "\n"  
+
+        with open("{}/result_pvalue.txt".format(demultiplex_dir),"w") as ff:
+            ff.write(write_first_line)
+            for i in range(len(all_bar)):
+
+                if all_p[i][0] > 1:
+                    p1 = 1.0
+                else:
+                    p1 = all_p[i][0]
+                if all_p[i][1] > 1:
+                    p2 = 1.0
+                else:
+                    p2 = all_p[i][1]
+
+
+                all_p_value_list = rechange_p_value_order(all_bar[i])
+                ff.write("{}\t{}\t{}\t{}".format(all_bar[i],final_dict[all_bar[i]],p1,p2))#,all_class[i]
+                for i in range(sample_num):
+                    sp = all_p_value_list[i]
+                    if sp > 1:
+                        sp = 1.0
+                    ff.write("\t{}".format(sp))
+                ff.write("\n")
+        ff.close()
+
+
+
+        with open("{}/specific_germline.txt".format(demultiplex_dir),"w") as ffff:
+            ffff.write("Specific germline\tSample\n")
+            for i in specific_germline.keys():
+                for j in specific_germline[i]:
+                    ffff.write("{}\t{}\n".format(j,i))
+        ffff.close()
+
+        generate_html(demultiplex_dir)
+        print("["+record_time()+"] Demultiplexing done!")
+        end = time.time()
+        elapsed = end-start
+        print("Total time:",str(time.strftime("%Hh%Mm%Ss", time.gmtime(elapsed))))
+
+
+
+
+
+######################-------------------------------##########################
+    else:#run_pip_simple
+        (cell_pvalue_dic,specific_germline,all_p,all_class,all_bar,clean_barcode,matrix_fre,final_dict) = run_pip_simple(matrix_alt,matrix_ref,matrix_fre,matrix_depth,sample_num,confident_germline_ratio,D_x,D_y)
+
+        write_first_line = "Barcode\tDemultiplex\tP_value_1\tP_value_2"
+        for i in range(sample_num):
+            write_first_line = write_first_line+"\t"+"Sample"+str(i)+"_Pr"
+        write_first_line = write_first_line + "\n"  
+
+        with open("{}/result_pvalue.txt".format(demultiplex_dir),"w") as ff:
+            ff.write(write_first_line)
+            for i in range(len(all_bar)):
+
+                if all_p[i][0] > 1:
+                    p1 = 1.0
+                else:
+                    p1 = all_p[i][0]
+                if all_p[i][1] > 1:
+                    p2 = 1.0
+                else:
+                    p2 = all_p[i][1]
+
+
+                all_p_value_list = cell_pvalue_dic[all_bar[i]]
+                ff.write("{}\t{}\t{}\t{}".format(all_bar[i],final_dict[all_bar[i]],p1,p2))#,all_class[i]
+                for i in range(sample_num):
+                    sp = all_p_value_list[i]
+                    if sp > 1:
+                        sp = 1.0
+                    ff.write("\t{}".format(sp))
+                ff.write("\n")
+        ff.close()
+
+        with open("{}/specific_germline.txt".format(demultiplex_dir),"w") as ffff:
+            ffff.write("Specific germline\tSample\n")
+            for i in specific_germline.keys():
+                for j in specific_germline[i]:
+                    ffff.write("{}\t{}\n".format(j,i))
+        ffff.close()
+
+
+        generate_html(demultiplex_dir)
+        print("["+record_time()+"] Demultiplexing done!")
+        end = time.time()
+        elapsed = end-start
+        print("Total time:",str(time.strftime("%Hh%Mm%Ss", time.gmtime(elapsed))))
+
 
 
 if __name__ == '__main__':
