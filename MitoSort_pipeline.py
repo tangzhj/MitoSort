@@ -391,7 +391,8 @@ def Generate_SNP_matrix(bam_file,genome_fasta,chrm_length,varscan_path,cell_barc
 @click.option("--p1_cutoff", required = False, default = "0.9", help = "maximum cutoff of p1 for doublet identification. Default to be 0.9")
 @click.option("--p2_cutoff", required = False, default = "0.1", help = "minimun cutoff of p2 for doublet identification. Default to be 0.1")
 @click.option("--method", required = False, default = "full", help = "if not 'full' it would be 'direct',which direct caculate p_value. ")
-def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff,method):
+@click.option("--depth_cutoff", required = False, default = "1", help = " the depth percell lower than depth_percell get 'unassign' ")
+def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff,method,depth_cutoff):
     """
     Identifying cross-genotype doublets and demultiplexing samples
     """
@@ -734,7 +735,7 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff,method):
                                 #unassign_cell.append(a_cell)
                             #................................................. 
                             depth_percell = np.mean(matrix_depth.loc[a_cell,:])
-                            if depth_percell<1:
+                            if depth_percell<float(depth_cutoff):
                                 unassign_cell.append(a_cell)
 
 
@@ -757,6 +758,11 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff,method):
                             #print(k_alt,k_ref,c_alt,c_ref)
                             post_mean = alpha_post/(alpha_post + beta_post)
                             post_mode = (alpha_post-1)/(alpha_post+beta_post-2)
+                                                            
+                            if post_mode>1:
+                                post_mode = 1
+                            if post_mode<0:
+                                post_mode = 0
                                 #print(post_mean)
                             #ppsum = ppsum * abs(post_mean)
                             cell_pvalue_dic[a_cell].append(post_mean)
@@ -1655,6 +1661,8 @@ def demultiplex(output_dir,clusters,p1_cutoff,p2_cutoff,method):
                     sp = all_p_value_list[i]
                     if sp > 1:
                         sp = 1.0
+                    if sp < 0:
+                        sp = 0.0
                     ff.write("\t{}".format(sp))
                 ff.write("\n")
         ff.close()
