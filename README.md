@@ -110,7 +110,7 @@ Options:
   --p2_cutoff TEXT       minimun cutoff of p2 for doublet identification.
                          Default to be 0.1
 
-  --depth_cutoff TEXT      If the depth per cell is less than the specified 
+  --depth_cutoff TEXT    If the depth per cell is less than the specified 
                          depth threshold (depth_percell), then assign the value 
                          'unassigned'. Default to be 1.
 
