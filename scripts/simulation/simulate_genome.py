@@ -12,8 +12,8 @@ import sys
 ################
 #This is used to simulate genome bam file.
 #(num_cells_per_sample1,doublet_num1,want_reads1,repeat1,sample_num1)
-#python simulate_genome.py 300 30 20000 1 8
 '''
+python simulate_genome.py 300 30 20000 1 8
 sh lib_run_snv.sh 300 20000 1 8
 python generate_split_bam.py 300_20000_1_8
 python standard_pool_test_split.py ./splitbam_raw/ ./bamfile/300_20000_1_8_simulated.sorted.snv ./barcode/300_20000_1_8_simulated.bam_barcodes.txt ./300_20000_1_8/
@@ -45,7 +45,7 @@ def generate_dic():
     genome_spiltbam = ['CD34_genome_bam', 'BMMC_genome_bam', 'CRC_genome_bam', 'CCL1_genome_bam', 'sample1_genome_bam','lib2_genome_bam']
     for i in genome_spiltbam:
         k = i.split("_")[0]
-        for j in  os.listdir("../simulate_reads/"+i):
+        for j in  os.listdir("/data/R04/chenbzh5/bottleneck2/simulation/bam_data/simulate_depth/simulate_reads/"+i):
             if k not in samplename_barcode_of_genome:
                 print(k)
                 samplename_barcode_of_genome[k] = []
@@ -103,6 +103,9 @@ def simulate_reads_for_cell_barcode(args,args2):
             return a
         else:
 
+
+
+
             # Select a random set of matching reads
             selected_reads = random.sample(matching_reads, min(int(read_count), int(want_reads)))
 
@@ -136,6 +139,7 @@ def simulate_reads_for_cell_barcode(args,args2):
             simulated_bam.write(read)
 
         return a
+
 
     #-------------------------------------------#doublet
     else:
@@ -174,6 +178,7 @@ def simulate_reads_for_cell_barcode(args,args2):
                 #    read.reference_id = 24
                 #    read.reference_name = "chrM"
         cell_bam.close()
+
 
 
         #-------------------------------------------
@@ -280,6 +285,13 @@ def simulate_reads_for_cell_barcode(args,args2):
             return a
 
 
+
+        
+
+
+
+        
+
 ##
 
 get_sample_count = []
@@ -300,26 +312,43 @@ repeat = int(repeat1)
 sample_num = int(sample_num1)
 doublet_num = int(doublet_num1)
 need_mt_reads = 500
-merged_bam = pysam.AlignmentFile("../merged_10people.bam", "rb")
+merged_bam = pysam.AlignmentFile("/data/R04/chenbzh5/bottleneck2/simulation/bam_data/merged_10/bamfile/merged_10people.bam", "rb")
 # Create a new BAM file and write the simulated reads to it
 #simulated_bam = pysam.AlignmentFile("{}_{}_simulated.bam".format(num_cells_per_sample, want_reads), "wb", template=merged_bam)
 
 
 
+
+
 if __name__ == "__main__":
+
+
+   
+
+
 
     start_time = time.time()
 
+
+
+
+
     sample_dir = {
-    'CD34':'../CD34_genome_bam/',
-    'BMMC':'../BMMC_genome_bam/',
-    '15#16':'../15#16_genome_bam/',
-    'CRC':'../CRC_genome_bam/',
-    'CCL1':'../CCL1_genome_bam/',
-    'sample1':'../sample1_genome_bam/',
-    'sample7':'../sample7_genome_bam/',
-    'lib2':'../lib2_genome_bam/'
+    'CD34':'/data/R04/chenbzh5/bottleneck2/simulation/bam_data/simulate_depth/simulate_reads/CD34_genome_bam/',
+    'BMMC':'/data/R04/chenbzh5/bottleneck2/simulation/bam_data/simulate_depth/simulate_reads/BMMC_genome_bam/',
+    '15#16':'/data/R04/chenbzh5/bottleneck2/simulation/bam_data/simulate_depth/simulate_reads/15#16_genome_bam/',
+    'CRC':'/data/R04/chenbzh5/bottleneck2/simulation/bam_data/simulate_depth/simulate_reads/CRC_genome_bam/',
+    'CCL1':'/data/R04/chenbzh5/bottleneck2/simulation/bam_data/simulate_depth/simulate_reads/CCL1_genome_bam/',
+    #'CCL2':'/public/home/chenbzh5/project/mitoDNA_bottleneck/discover_bottleneck/output_GSE142745/PBMC_scATAC_1/TZJ/cancer_cellrange_output/CCL2+_1cellranger_output/SRR10804671/outs/splitbam/',
+    'sample1':'/data/R04/chenbzh5/bottleneck2/simulation/bam_data/simulate_depth/simulate_reads/sample1_genome_bam/',
+    'sample7':'/data/R04/chenbzh5/bottleneck2/simulation/bam_data/simulate_depth/simulate_reads/sample7_genome_bam/',
+    'lib2':'/data/R04/chenbzh5/bottleneck2/simulation/bam_data/simulate_depth/simulate_reads/lib2_genome_bam/'
     }    
+
+
+
+
+
 
 
     #sample_names = sample(['CD34','BMMC','15#16','CRC','CCL1','sample1','sample7','lib2'],sample_num)
@@ -331,7 +360,7 @@ if __name__ == "__main__":
     # Open the barcode list file and read the barcodes and read counts for each cell
     sample_barcodes = {}
     CB_barcode_dic = {}
-    with open("../barcode_result2.txt", "r") as barcode_file:
+    with open("/data/R04/chenbzh5/bottleneck2/simulation/bam_data/merged_10/barcode_merge/barcode_matrix/barcode_result2.txt", "r") as barcode_file:
         for line in barcode_file:
             if "barcode" in line:
                 continue
@@ -370,6 +399,8 @@ if __name__ == "__main__":
     #print(CB_barcode_dic.keys())
     for i in range(len(sample_names)):
         print(sample_names[i],len(sample_barcodes[sample_names[i]]),"Open the barcode list file")
+
+
 
 
 
@@ -424,7 +455,6 @@ if __name__ == "__main__":
                     results = simulate_reads_for_cell_barcode(args,"silglet")
 
         
-
     #pool.close()
     #pool.join()
     
